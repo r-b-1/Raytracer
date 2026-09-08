@@ -126,3 +126,11 @@ Then, when you restart your terminals, you should be able to run the vcpkg progr
 vcpkg
 ```
 
+to build:
+```
+c++ -std=c++20 -Isrc src/main.cc -o raytracer
+```
+to run:
+```
+./raytracer > imageName.png
+```
