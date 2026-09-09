@@ -2,6 +2,7 @@
 #define COLOR_H
 
 #include "vec3.h"
+#include "rtweekend.h"
 
 using color = vec3; // here we are using the matrix math from the vec3.h file to create a color class to color objects.
 
