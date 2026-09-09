@@ -7,6 +7,7 @@ class hit_record {
     public:
         point3 p;
         vec3 normal;
+        color surface_color;
         float t;
         bool front_face;
 
@@ -24,6 +25,7 @@ class hittable {
         virtual ~hittable() = default;
 
         virtual bool hit(const ray& r, float ray_tmin, float ray_tmax, hit_record& rec) const = 0;
+
 
 };
 

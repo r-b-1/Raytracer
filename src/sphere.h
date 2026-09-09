@@ -8,7 +8,7 @@
 
 class sphere: public hittable {
     public:
-        sphere(const point3& center, float radius) : center(center), radius(std::fmax(0, radius)) {}
+        sphere(const point3& center, float radius, const color& sphere_color = color(1,1,1)) : center(center), radius(std::fmax(0, radius)), sphere_color(sphere_color) {}
 
         bool hit(const ray& r, float ray_tmin, float ray_tmax, hit_record& rec) const override {
             vec3 oc = center - r.origin();
@@ -33,12 +33,14 @@ class sphere: public hittable {
             rec.p = r.at(rec.t);
             vec3 outward_normal = (rec.p - center) / radius;
             rec.set_face_normal(r, outward_normal);
-
+            
+            rec.surface_color = sphere_color;
             return true;
         }
     private:
         point3 center;
         float radius;
+        color sphere_color;
 
 };
 

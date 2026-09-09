@@ -9,7 +9,7 @@
 color ray_color(const ray& r, const hittable& world) {
     hit_record rec;
     if (world.hit(r, 0, infinity, rec)) {
-        return 0.5 * (rec.normal + color(1,1,1));
+        return rec.surface_color;
     }
 
 
@@ -33,8 +33,11 @@ int main() {
 
     hittable_list world;
     
-    world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
-    world.add(make_shared<sphere>(point3(0,-100.5,-1),100));
+    world.add(make_shared<sphere>(point3(0,0,-1), 0.5, color(1,0.55,0)));
+    world.add(make_shared<sphere>(
+        point3(0,-100.5,-1),100, 
+        color(0.8,0.45,0.45)
+    ));
 
 
 
