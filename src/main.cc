@@ -3,6 +3,7 @@
 #include "hittable.h"
 #include "hittable_list.h"
 #include "sphere.h"
+#include "framebuffer.h"
 
 
 
@@ -29,6 +30,8 @@ int main() {
     int image_height = int(image_width / aspect_ratio);
     image_height = (image_height < 1) ? 1 : image_height;
 
+    Framebuffer framebuffer(image_width, image_height);
+
     // World
 
     hittable_list world;
@@ -43,7 +46,7 @@ int main() {
     auto focal_length = 1.0;
     auto viewport_height = 2.0;
     auto viewport_width = viewport_height * (float(image_width)/image_height);
-    auto camera_center = point3(0,0,0);
+    auto camera_center = point3(0,0,1);
 
     // Calculate the vectors across the horizonta and down the vertical viewport edges.
     auto viewport_u = vec3(viewport_width, 0, 0);
@@ -59,7 +62,7 @@ int main() {
 
     // Render
 
-    std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+    // std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
 
     for (int j = 0; j < image_height; j++) {
         std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush; // Here we are calculating the scanlines left, using j to iterate.
@@ -69,9 +72,11 @@ int main() {
             ray r(camera_center, ray_direction);
             
             color pixel_color = ray_color(r, world);
-            write_color(std::cout, pixel_color);
+            framebuffer.setPixel(i, j, pixel_color);
         }
     }
 
+    framebuffer.exportAsPNG("image.png");
     std::clog << "\rDone.                 \n";
+    
 }
