@@ -78,5 +78,9 @@ int main() {
 
     framebuffer.exportAsPNG("image.png");
     std::clog << "\rDone.                 \n";
+
     
+   //  framebuffer.clear();
+   //  framebuffer.exportAsPNG("image.png");
+
 }

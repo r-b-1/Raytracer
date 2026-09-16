@@ -27,12 +27,9 @@ void Framebuffer::exportAsPNG( std::string filename )
     {
         const vec3& pixel = fb[y * width + x];
 
-        auto r = static_cast<png::byte>(
-            std::clamp(pixel.x(), 0.0f, 1.0f) * 255.0f);
-        auto g = static_cast<png::byte>(
-            std::clamp(pixel.y(), 0.0f, 1.0f) * 255.0f);
-        auto b = static_cast<png::byte>(
-            std::clamp(pixel.z(), 0.0f, 1.0f) * 255.0f);
+        auto r = static_cast<png::byte>(std::clamp(pixel.x(), 0.0f, 1.0f) * 255.0f);
+        auto g = static_cast<png::byte>(std::clamp(pixel.y(), 0.0f, 1.0f) * 255.0f);
+        auto b = static_cast<png::byte>(std::clamp(pixel.z(), 0.0f, 1.0f) * 255.0f);
             
         imData[y][x] = png::rgb_pixel(r, g, b);
     }
