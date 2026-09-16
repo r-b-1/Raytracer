@@ -24,7 +24,7 @@ int main() {
     // Image
 
     auto aspect_ratio = 16.0 / 9.0;
-    int image_width = 400;
+    int image_width = 480;
 
     // Calculate the image height to ensure that its at least 1.
     int image_height = int(image_width / aspect_ratio);
@@ -36,8 +36,34 @@ int main() {
 
     hittable_list world;
     
-    world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
+    // The earth below
     world.add(make_shared<sphere>(point3(0,-100.5,-1),100));
+
+    // Body of snowman
+    world.add(make_shared<sphere>(point3(0,0,-1), 0.5));
+    world.add(make_shared<sphere>(point3(0,0.75,-1), 0.4));
+    world.add(make_shared<sphere>(point3(0, 1.25,-1), 0.27));
+
+    // coal buttons
+    world.add(make_shared<sphere>(point3(0,0.9,-0.73), 0.1));
+    world.add(make_shared<sphere>(point3(0,0.75,-0.69), 0.1));
+    world.add(make_shared<sphere>(point3(0,0.6,-0.73), 0.1));
+
+
+
+    // Snowman eyes
+    world.add(make_shared<sphere>(point3(0.2, 1.33,-0.8), 0.1));
+    world.add(make_shared<sphere>(point3(-0.2, 1.33,-0.8), 0.1));
+
+    // snowman nose
+    world.add(make_shared<sphere>(point3(0, 1.2,-0.83), 0.1));
+
+
+    // the SUN
+    world.add(make_shared<sphere>(point3(0,100.5,-200),100));
+
+
+
 
 
 
@@ -46,7 +72,7 @@ int main() {
     auto focal_length = 1.0;
     auto viewport_height = 2.0;
     auto viewport_width = viewport_height * (float(image_width)/image_height);
-    auto camera_center = point3(0,0,1);
+    auto camera_center = point3(0.5,1,0.25);
 
     // Calculate the vectors across the horizonta and down the vertical viewport edges.
     auto viewport_u = vec3(viewport_width, 0, 0);
