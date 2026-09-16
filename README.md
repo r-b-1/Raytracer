@@ -134,3 +134,14 @@ to run:
 ```
 ./raytracer > imageName.png
 ```
+
+Now there are 2 new commands to run the program ...
+
+```
+cmake --build buildVCPkg --target raytracer
+```
+... to build the raytracer executable and then ...
+```
+./buildVCPkg/raytracer
+```
+... to run the raytracer
