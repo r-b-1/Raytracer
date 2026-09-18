@@ -5,6 +5,8 @@
 
 class Framebuffer {
     public:
+        Framebuffer() : width(0), height(0) {}
+
         Framebuffer(int w, int h) : width(w), height(h) {
             fb.resize( width * height );
         }
