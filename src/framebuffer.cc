@@ -1,3 +1,4 @@
+#include "rtweekend.h"
 #include "framebuffer.h"
 #include "png++/png.hpp"
 
