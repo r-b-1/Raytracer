@@ -22,3 +22,9 @@ class ray {
 };
 
 #endif
+
+// bool hit =->
+
+// f(p) = 0, on the surfece
+// f(p) < 0, inside the surface
+// f(p) > 0, outside the surface
