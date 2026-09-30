@@ -25,10 +25,7 @@ class camera {
             for (int i = 0; i < image_width; i++) {
                 auto u = double(i);
                 auto v = double(j);
-                auto pixel_color = ray_color(ray(camera_center,
-                                                 pixel00_loc + u*pixel_delta_u
-                                                 + v*pixel_delta_v - camera_center),
-                                             scene);
+                auto pixel_color = ray_color(make_ray(pixel00_loc + u*pixel_delta_u + v*pixel_delta_v), scene);
                 framebuffer.setPixel(i, j, pixel_color);
             }
         }
@@ -65,7 +62,7 @@ class camera {
 
         camera_center = lookfrom;
 
-        vec3 w = unit_vector(lookfrom - lookat); // Camera backward
+        w = unit_vector(lookfrom - lookat); // Camera backward
         vec3 u = unit_vector(cross(vup, w));     // Camera right
         vec3 v = cross(w, u);                   // Camera up
 

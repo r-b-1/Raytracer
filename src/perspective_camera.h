@@ -8,6 +8,6 @@ class PerspectiveCamera : public camera {
     ray make_ray(const point3&  pixel_position) const override {
         vec3 offset = pixel_position - camera_center;
 
-        return ray(camera_center, offset - w);
+        return ray(camera_center, offset);
     }
 };
