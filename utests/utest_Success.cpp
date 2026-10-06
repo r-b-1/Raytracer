@@ -3,6 +3,8 @@
 
 #include "vec3.h"
 
+#include "ray.h"
+
 using Catch::Matchers::WithinAbs;
 
 TEST_CASE("Vector addition")
@@ -133,4 +135,78 @@ TEST_CASE("Component-wise multiplication is not the dot product")
     REQUIRE( (a * b).z() == 18.0f );
 
     REQUIRE( dot(a, b) == 32.0f );
+}
+
+// Ray tests
+
+TEST_CASE("Ray construction and accessors")
+{
+    point3 origin(1, 2, 3);
+    vec3 direction(4, 5, 6);
+    ray r(origin, direction);
+    
+    REQUIRE( r.origin().x() == 1 );
+    REQUIRE( r.origin().y() == 2 );
+    REQUIRE( r.origin().z() == 3 );
+    
+    REQUIRE( r.direction().x() == 4 );
+    REQUIRE( r.direction().y() == 5 );
+    REQUIRE( r.direction().z() == 6 );
+}
+
+TEST_CASE("Ray at() function - point along ray")
+{
+    point3 origin(0, 0, 0);
+    vec3 direction(1, 0, 0);
+    ray r(origin, direction);
+    
+    // At t=0, should be at the origin
+    point3 p0 = r.at(0);
+    REQUIRE( p0.x() == 0 );
+    REQUIRE( p0.y() == 0 );
+    REQUIRE( p0.z() == 0 );
+    
+    // At t=5, should be 5 units along the direction
+    point3 p5 = r.at(5);
+    REQUIRE( p5.x() == 5 );
+    REQUIRE( p5.y() == 0 );
+    REQUIRE( p5.z() == 0 );
+}
+
+TEST_CASE("Ray at() with non-origin starting point")
+{
+    point3 origin(2, 3, 4);
+    vec3 direction(1, 1, 1);
+    ray r(origin, direction);
+    
+    // At t=2, should be at origin + 2*direction
+    point3 p = r.at(2);
+    REQUIRE( p.x() == 4 );
+    REQUIRE( p.y() == 5 );
+    REQUIRE( p.z() == 6 );
+}
+
+TEST_CASE("Ray at() with negative t")
+{
+    point3 origin(5, 5, 5);
+    vec3 direction(1, 0, 0);
+    ray r(origin, direction);
+    
+    // At negative t, should go backwards along the direction
+    point3 p = r.at(-3);
+    REQUIRE( p.x() == 2 );
+    REQUIRE( p.y() == 5 );
+    REQUIRE( p.z() == 5 );
+}
+
+TEST_CASE("Ray default constructor")
+{
+    ray r;
+    // Default ray should initialize with default vec3 values (0, 0, 0)
+    REQUIRE( r.origin().x() == 0 );
+    REQUIRE( r.origin().y() == 0 );
+    REQUIRE( r.origin().z() == 0 );
+    REQUIRE( r.direction().x() == 0 );
+    REQUIRE( r.direction().y() == 0 );
+    REQUIRE( r.direction().z() == 0 );
 }
