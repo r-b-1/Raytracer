@@ -5,18 +5,13 @@
 #include "point_light.h"
 #include "vec3.h"
 
-// HitStruct is defined in shape.h, which includes this header. Only a forward
-// declaration is needed for a const-reference parameter, and it is what keeps
-// the two headers from deadlocking on each other.
+// Defined in shape.h; forward-declared to avoid a circular include.
 class HitStruct;
 
-// Base class for surface shading models. Every Shape owns one and the renderer
-// calls rayColor once per hit.
 class Shader {
 public:
     virtual ~Shader() = default;
 
-    // Returns the outgoing color for the surface described by h.
     virtual color rayColor(const HitStruct& h) const = 0;
 
     void set_light(const PointLight& light) { light_ = light; }

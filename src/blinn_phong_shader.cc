@@ -8,19 +8,14 @@
 color BlinnPhongShader::rayColor(const HitStruct& h) const {
     vec3 lightDir = unit_vector(light().position() - h.p());
 
-    // The view direction points from the surface back toward the camera, so it
-    // is the reverse of the ray that produced this hit.
+    // Reverse the incoming ray to point back toward the viewer.
     vec3 viewDir = unit_vector(-h.ray_direction());
 
-    // Blinn's trick: the halfway vector between light and view, so the exponent
-    // tightens the highlight without needing a reflection vector.
     vec3 halfVector = unit_vector(lightDir + viewDir);
 
     float nDotl = std::max(0.0f, dot(h.normal(), lightDir));
 
-    // No direct light means no highlight either. Without this early return a
-    // grazing half-vector can light the specular term on a surface the diffuse
-    // term has already blacked out, which reads as a floating bright spot.
+    // Suppress highlights on the unlit side.
     if (nDotl <= 0.0f)
         return color(0, 0, 0);
 

@@ -3,8 +3,7 @@
 
 #include "shader.h"
 
-// Lambertian plus a specular highlight. shininess_ is the Phong exponent:
-// larger values give a tighter, smaller highlight.
+// Diffuse shading with a specular highlight.
 class BlinnPhongShader : public Shader {
 public:
     BlinnPhongShader(const color& baseColor = color(0.8, 0.8, 0.8),
@@ -25,7 +24,7 @@ public:
 private:
     color baseColor_;
     color specular_;
-    float shininess_;
+    float shininess_; // Higher exponents produce smaller highlights.
     float specular_strength_;
 };
 

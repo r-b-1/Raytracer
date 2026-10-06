@@ -3,7 +3,6 @@
 #include "shape.h"
 
 color NormalShader::rayColor(const HitStruct& h) const {
-    // This is the shading hack that used to live inline in camera::ray_color.
-    // A normal of (-1,-1,-1) lands on black, (+1,+1,+1) on white.
+    // Map each normal component from [-1, 1] to [0, 1].
     return 0.5f * (h.normal() + color(1, 1, 1));
 }

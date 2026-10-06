@@ -3,8 +3,7 @@
 
 #include "shader.h"
 
-// Matte / diffuse surface. Brightness is the cosine of the angle between the
-// surface normal and the direction to the light, scaled by baseColor.
+// Diffuse shading.
 class LambertianShader : public Shader {
 public:
     explicit LambertianShader(const color& baseColor = color(0.8, 0.8, 0.8),
