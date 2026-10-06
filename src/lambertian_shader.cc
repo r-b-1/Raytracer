@@ -16,5 +16,5 @@ color LambertianShader::rayColor(const HitStruct& h) const {
     // produces negative radiance that the framebuffer clamps to hard black.
     float nDotl = std::max(0.0f, dot(h.normal(), lightDir));
 
-    return albedo_ * nDotl;
+    return baseColor_ * nDotl;
 }

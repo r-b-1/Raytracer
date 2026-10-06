@@ -18,9 +18,9 @@ int main() {
 
     // One matte sphere and one shiny sphere, so the two shading models can be
     // compared directly in a single image.
-    auto matte = std::make_shared<LambertianShader>(color(0.85, 0.25, 0.25), scene.light);
-    auto shiny = std::make_shared<BlinnPhongShader>(color(0.25, 0.45, 0.85),
-                                                   color(1, 1, 1),
+    auto matte = std::make_shared<LambertianShader>(color(0.95, 0.95, 0.15), scene.light);
+    auto shiny = std::make_shared<BlinnPhongShader>(color(0.95, 0.95, 0.15),
+                                                   color(1, 1, 1), // Color of the light
                                                    64.0f,
                                                    0.8f,
                                                    scene.light);
@@ -37,12 +37,12 @@ int main() {
     Scene lambert_scene;
     lambert_scene.light = scene.light;
     lambert_scene.objects.push_back(
-        std::make_shared<sphere>(point3(0, 0, -1), 0.6, std::make_shared<LambertianShader>(color(0.85, 0.25, 0.25), scene.light)));
+        std::make_shared<sphere>(point3(0, 0, -1), 0.6, std::make_shared<LambertianShader>(color(0.95, 0.95, 0.15), scene.light)));
     cam.render(lambert_scene, "lambertian.png");
 
     Scene phong_scene;
     phong_scene.light = scene.light;
     phong_scene.objects.push_back(
-        std::make_shared<sphere>(point3(0, 0, -1), 0.6, std::make_shared<BlinnPhongShader>(color(0.25, 0.45, 0.85), color(1, 1, 1), 64.0f, 0.8f, scene.light)));
+        std::make_shared<sphere>(point3(0, 0, -1), 0.6, std::make_shared<BlinnPhongShader>(color(0.95, 0.95, 0.15), color(1, 1, 1), 64.0f, 0.8f, scene.light)));
     cam.render(phong_scene, "blinn_phong.png");
 }

@@ -27,5 +27,5 @@ color BlinnPhongShader::rayColor(const HitStruct& h) const {
     float nDoth = std::max(0.0f, dot(h.normal(), halfVector));
     float highlight = std::pow(nDoth, shininess_) * specular_strength_;
 
-    return albedo_ * nDotl + specular_ * highlight;
+    return baseColor_ * nDotl + specular_ * highlight;
 }

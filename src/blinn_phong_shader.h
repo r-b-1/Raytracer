@@ -7,13 +7,13 @@
 // larger values give a tighter, smaller highlight.
 class BlinnPhongShader : public Shader {
 public:
-    BlinnPhongShader(const color& albedo = color(0.8, 0.8, 0.8),
+    BlinnPhongShader(const color& baseColor = color(0.8, 0.8, 0.8),
                      const color& specular = color(1, 1, 1),
                      float shininess = 32.0f,
                      float specular_strength = 1.0f,
                      const PointLight& light = PointLight())
         : Shader(light),
-          albedo_(albedo),
+          baseColor_(baseColor),
           specular_(specular),
           shininess_(shininess),
           specular_strength_(specular_strength) {}
@@ -23,7 +23,7 @@ public:
     float shininess() const { return shininess_; }
 
 private:
-    color albedo_;
+    color baseColor_;
     color specular_;
     float shininess_;
     float specular_strength_;
