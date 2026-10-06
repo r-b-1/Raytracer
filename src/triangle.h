@@ -10,8 +10,10 @@
 // three unknowns (beta, gamma, t) and applying Cramer's rule (p.42-43).
 class triangle : public Shape {
 public:
-    triangle(const point3& v0, const point3& v1, const point3& v2)
-        : v0(v0),
+    triangle(const point3& v0, const point3& v1, const point3& v2,
+             std::shared_ptr<Shader> shader = std::make_shared<NormalShader>())
+        : Shape(std::move(shader)),
+          v0(v0),
           va_minus_vb(v0 - v1),   // the (a, b, c) coefficients, slide p.42
           va_minus_vc(v0 - v2),   // the (d, e, f) coefficients, slide p.42
           n(cross(v1 - v0, v2 - v0)) {
@@ -56,6 +58,7 @@ public:
         hit.set_t(t);
         hit.set_p(r.at(t));
         hit.set_face_normal(r, n);
+        hit.set_shader(shader());
 
         return true;
     }

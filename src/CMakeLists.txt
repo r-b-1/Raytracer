@@ -16,6 +16,14 @@ add_library (cs4212-util
   framebuffer.cc  
   interval.h
   triangle.h
+  point_light.h
+  shader.h
+  normal_shader.h
+  normal_shader.cc
+  lambertian_shader.h
+  lambertian_shader.cc
+  blinn_phong_shader.h
+  blinn_phong_shader.cc
 )
 target_compile_definitions(cs4212-util PUBLIC HAS_GLM)
 target_link_libraries(cs4212-util PRIVATE Boost::program_options)

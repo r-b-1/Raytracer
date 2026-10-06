@@ -38,7 +38,11 @@ class camera {
         double tmax = std::numeric_limits<double>::infinity();
         HitStruct rec;
         if (scene.intersect(r, k_tmin, tmax, rec)) {
-            return 0.5 * (rec.normal() + color(1, 1, 1));
+            // Dispatch to whatever material the hit shape carries. The null
+            // check is a safety net for a Shape that skipped set_shader.
+            if (rec.shader())
+                return rec.shader()->rayColor(rec);
+            return 0.5f * (rec.normal() + color(1, 1, 1));
         }
         vec3 unit_direction = unit_vector(r.direction());
         auto a = 0.5 * (unit_direction.y() + 1.0);

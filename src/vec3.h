@@ -6,6 +6,13 @@
 #include <iostream>
 
 
+// Forward declared here and defined in rtweekend.h. vec3.h cannot include
+// rtweekend.h to get them: rtweekend.h includes vec3.h, so the include order
+// would decide whether these are visible, and they would break in any
+// translation unit that reaches vec3.h first.
+double random_double();
+double random_double(double min, double max);
+
 class vec3 {
     public:
     float e[3];

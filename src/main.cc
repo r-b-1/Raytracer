@@ -1,44 +1,48 @@
 #include "rtweekend.h"
 
 #include "hittable.h"
-#include "hittable_list.h"
 #include "sphere.h"
-// #include "framebuffer.h"
 #include "scene.h"
-#include "triangle.h"
 
 #include "camera.h"
 #include "perspective_camera.h"
 #include "orthographic_camera.h"
 
+#include "lambertian_shader.h"
+#include "blinn_phong_shader.h"
+#include "normal_shader.h"
+
 int main() {
-    PerspectiveCamera cam;
-
     Scene scene;
+    scene.light.set_position(point3(0, 10, 5));
 
+    // One matte sphere and one shiny sphere, so the two shading models can be
+    // compared directly in a single image.
+    auto matte = std::make_shared<LambertianShader>(color(0.85, 0.25, 0.25), scene.light);
+    auto shiny = std::make_shared<BlinnPhongShader>(color(0.25, 0.45, 0.85),
+                                                   color(1, 1, 1),
+                                                   64.0f,
+                                                   0.8f,
+                                                   scene.light);
+
+    scene.objects.push_back(std::make_shared<sphere>(point3(-0.7, 0, -1), 0.5, matte));
+    scene.objects.push_back(std::make_shared<sphere>(point3(0.7, 0, -1), 0.5, shiny));
+
+    PerspectiveCamera cam;
     cam.lookfrom = point3(0, 0, 0);
-    cam.lookat = point3(0, 0, -6);
+    cam.lookat = point3(0, 0, -1.5);
+    cam.render(scene, "shaded.png");
 
-    scene.objects.push_back(std::make_shared<sphere>(point3(0, 0, -6), 0.5));
+    // Second deliverable: each shading model on its own, one sphere per image.
+    Scene lambert_scene;
+    lambert_scene.light = scene.light;
+    lambert_scene.objects.push_back(
+        std::make_shared<sphere>(point3(0, 0, -1), 0.6, std::make_shared<LambertianShader>(color(0.85, 0.25, 0.25), scene.light)));
+    cam.render(lambert_scene, "lambertian.png");
 
-    scene.objects.push_back(std::make_shared<triangle>(point3(-1.2, -0.2, -7), point3(0.8, -0.5, -5), point3(0.9, 0, -5)));
-    scene.objects.push_back(std::make_shared<triangle>(point3(0.773205, -0.93923, -7), point3(0.0330127, 0.94282, -5), point3(-0.45, 0.779423, -5)));
-    scene.objects.push_back(std::make_shared<triangle>(point3(0.426795, 1.13923, -7), point3(-0.833013, -0.44282, -5 ), point3(-0.45, -0.779423, -5)));    
-
-    cam.render(scene, "scene_perspective.png");
-
-    OrthographicCamera ortho;
-    ortho.lookfrom = cam.lookfrom;
-    ortho.lookat = cam.lookat;
-    ortho.vup = cam.vup;
-    ortho.image_width = cam.image_width;
-    ortho.aspect_ratio = cam.aspect_ratio;
-    ortho.render(scene, "scene_orthographic.png");    
-
-    
-
-
-
-    
-
+    Scene phong_scene;
+    phong_scene.light = scene.light;
+    phong_scene.objects.push_back(
+        std::make_shared<sphere>(point3(0, 0, -1), 0.6, std::make_shared<BlinnPhongShader>(color(0.25, 0.45, 0.85), color(1, 1, 1), 64.0f, 0.8f, scene.light)));
+    cam.render(phong_scene, "blinn_phong.png");
 }
