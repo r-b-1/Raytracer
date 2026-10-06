@@ -1,5 +1,23 @@
 This project uses CMake and vcpkg for managing C++ dependencies. It serves as a simple example to test your build setup before we get into more complicted code.
 
+## Quick start
+
+```
+cmake --preset=default          # configure into buildVCPkg/
+cmake --build buildVCPkg        # build everything
+./buildVCPkg/main                # render, writes 3 PNGs to the current directory
+```
+
+
+To run the `vec3` tests directly through Catch2 instead:
+
+```
+./buildVCPkg/utests/utest_Success
+```
+
+Useful Catch2 flags: list test names with `--list-tests`, filter by name with a
+quoted argument, e.g. `utest_Success "cross*"`.
+
 ## Building Using CMake Presets
 
 We have several CMake Build Presets that are outlined in the CMakePresets.json. Some are for building for Release or Debug mode. Running the default setup is just fine too.
