@@ -35,8 +35,7 @@ if(ENABLE_CLANG_TIDY)
   endif()
 endif()
 
-# Should be using at least C++17, but 20 is better, so
-# make sure we switch to 20
+# Require standard C++20 for all project targets, without compiler extensions.
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

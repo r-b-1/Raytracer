@@ -144,22 +144,22 @@ Then, when you restart your terminals, you should be able to run the vcpkg progr
 vcpkg
 ```
 
-to build:
-```
-c++ -std=c++20 -Isrc src/main.cc -o raytracer
-```
-to run:
-```
-./raytracer > imageName.png
+Configure and build the renderer from the project root:
+
+```sh
+cmake --preset default
+cmake --build buildVCPkg --target main
 ```
 
-Now there are 2 new commands to run the program ...
+CMake requires C++20 and links the renderer's source files and dependencies.
+Use this build for the full project; the VS Code "build active file" task is
+only suitable for standalone source files.
 
+Run the renderer:
+
+```sh
+./buildVCPkg/main
 ```
-cmake --build buildVCPkg --target raytracer
-```
-... to build the raytracer executable and then ...
-```
-./buildVCPkg/raytracer
-```
-... to run the raytracer
+
+It writes PNG files directly to the current directory, including `rubiks.png`
+and `rubiks_opposite.png`.
