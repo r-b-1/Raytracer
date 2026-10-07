@@ -3,8 +3,10 @@
 #include "lambertian_shader.h"
 #include "blinn_phong_shader.h"
 #include "perspective_camera.h"
+#include "orthographic_camera.h"
 #include "scene.h"
 #include "sphere.h"
+#include "rubiks_cube.h"
 
 int main() {
     Scene scene;
@@ -76,4 +78,36 @@ int main() {
     snowman_cam.lookfrom = point3(0, 0.8, 1);
     snowman_cam.lookat = point3(0, 0.65, -1);
     snowman_cam.render(snowman_scene, "snowman.png");
+
+    Scene rubiks_scene;
+    // Diffuse lighting for the black base in the bottom view.
+    rubiks_scene.light.set_position(point3(-6, -5, -6));
+
+    auto black = std::make_shared<LambertianShader>(
+        color(0.03, 0.03, 0.03), rubiks_scene.light);
+
+    add_rubiks_cube(rubiks_scene, black);
+
+    PerspectiveCamera rubiks_cam;
+    // View the outside of the bottom, back, and left faces.
+    rubiks_cam.lookfrom = point3(-3, -2, -3);
+    rubiks_cam.lookat = point3(0, 1.5, 0);
+    rubiks_cam.render(rubiks_scene, "rubiks.png");
+
+    // Show the opposite three faces as well.
+    rubiks_cam.lookfrom = point3(3, 5, 3);
+    // Move the base's diffuse light; the tiles have their own highlight lights.
+    rubiks_scene.light.set_position(point3(6, 8, 6));
+    black->set_light(rubiks_scene.light);
+    rubiks_cam.render(rubiks_scene, "rubiks_opposite.png");
+
+//     OrthographicCamera rubiks_orth_cam;
+// //     rubiks_cam.lookfrom = point3(1, 2, 5);
+//     rubiks_orth_cam.lookfrom = point3(1, 2, 5);
+//     rubiks_orth_cam.lookat = point3(0, 1, 4);
+//     rubiks_orth_cam.render(rubiks_scene, "rubiks_orth.png");
 }
+
+
+// TODO: Make a rubiks cube, base black with colored 3x3 tiles. 
+// Note: it would also be cool that the cube was the scramble for the current world record solve.

@@ -24,8 +24,9 @@ add_library (cs4212-util
   lambertian_shader.cc
   blinn_phong_shader.h
   blinn_phong_shader.cc
+  rubiks_cube.h
+  rubiks_cube.cc
 )
 target_compile_definitions(cs4212-util PUBLIC HAS_GLM)
 target_link_libraries(cs4212-util PRIVATE Boost::program_options)
 target_link_libraries(cs4212-util PUBLIC glm::glm)
-
