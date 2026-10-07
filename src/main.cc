@@ -48,8 +48,8 @@ int main() {
         color(1.0, 0.35, 0.05), color(1, 1, 1), 32.0f, 0.4f, snowman_scene.light);
     auto ground = std::make_shared<LambertianShader>(
         color(0.25, 0.45, 0.15), snowman_scene.light);
-    auto sun = std::make_shared<LambertianShader>(
-        color(1.0, 0.9, 0.15), snowman_scene.light);
+    auto sun = std::make_shared<BlinnPhongShader>(
+        color(1.0, 0.9, 0.15), color(1, 1, 1), 1.0f, 2.0f, snowman_scene.light);
 
     snowman_scene.objects.push_back(
         std::make_shared<sphere>(point3(0, -100.5, -1), 100, ground));
