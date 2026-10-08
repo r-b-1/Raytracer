@@ -2,7 +2,6 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "vec3.h"
-
 #include "ray.h"
 
 using Catch::Matchers::WithinAbs;
@@ -137,6 +136,7 @@ TEST_CASE("Component-wise multiplication is not the dot product")
     REQUIRE( dot(a, b) == 32.0f );
 }
 
+
 // Ray tests
 
 TEST_CASE("Ray construction and accessors")
@@ -210,3 +210,4 @@ TEST_CASE("Ray default constructor")
     REQUIRE( r.direction().y() == 0 );
     REQUIRE( r.direction().z() == 0 );
 }
+

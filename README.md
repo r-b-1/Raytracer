@@ -1,5 +1,23 @@
 This project uses CMake and vcpkg for managing C++ dependencies. It serves as a simple example to test your build setup before we get into more complicted code.
 
+## Quick start
+
+```
+cmake --preset=default          # configure into buildVCPkg/
+cmake --build buildVCPkg        # build everything
+./buildVCPkg/main                # render, writes 3 PNGs to the current directory
+```
+
+
+To run the `vec3` tests directly through Catch2 instead:
+
+```
+./buildVCPkg/utests/utest_Success
+```
+
+Useful Catch2 flags: list test names with `--list-tests`, filter by name with a
+quoted argument, e.g. `utest_Success "cross*"`.
+
 ## Building Using CMake Presets
 
 We have several CMake Build Presets that are outlined in the CMakePresets.json. Some are for building for Release or Debug mode. Running the default setup is just fine too.
@@ -126,22 +144,22 @@ Then, when you restart your terminals, you should be able to run the vcpkg progr
 vcpkg
 ```
 
-to build:
-```
-c++ -std=c++20 -Isrc src/main.cc -o raytracer
-```
-to run:
-```
-./raytracer > imageName.png
+Configure and build the renderer from the project root:
+
+```sh
+cmake --preset default
+cmake --build buildVCPkg --target main
 ```
 
-Now there are 2 new commands to run the program ...
+CMake requires C++20 and links the renderer's source files and dependencies.
+Use this build for the full project; the VS Code "build active file" task is
+only suitable for standalone source files.
 
+Run the renderer:
+
+```sh
+./buildVCPkg/main
 ```
-cmake --build buildVCPkg --target raytracer
-```
-... to build the raytracer executable and then ...
-```
-./buildVCPkg/raytracer
-```
-... to run the raytracer
+
+It writes PNG files directly to the current directory, including `rubiks.png`
+and `rubiks_opposite.png`.

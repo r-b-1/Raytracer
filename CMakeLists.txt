@@ -35,8 +35,7 @@ if(ENABLE_CLANG_TIDY)
   endif()
 endif()
 
-# Should be using at least C++17, but 20 is better, so
-# make sure we switch to 20
+# Require standard C++20 for all project targets, without compiler extensions.
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -115,5 +114,6 @@ add_subdirectory(OpenGL)
 #
 enable_testing()
 add_subdirectory(utests)
-add_executable(raytracer src/main.cc src/framebuffer.cc)
-target_link_libraries(raytracer PRIVATE PNG::PNG)
+add_executable(main 
+  src/main.cc)
+target_link_libraries(main PRIVATE cs4212-util PNG::PNG)
