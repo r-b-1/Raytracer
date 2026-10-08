@@ -17,6 +17,8 @@ void Framebuffer::setPixel(int i, int j, const vec3& c) {
 void Framebuffer::exportAsPNG(std::string filename) {
     png::image<png::rgb_pixel> imData(width, height);
     for (size_t y = 0; y < imData.get_height(); y++) {
+        height = imData.get_height();
+        std::clog << "\rScanlines remaining: " << (height - y) << ' ' << std::flush;
         for (size_t x = 0; x < imData.get_width(); x++) {
             const vec3& pixel = fb[y * width + x];
 
