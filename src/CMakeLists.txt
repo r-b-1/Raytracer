@@ -26,6 +26,8 @@ add_library (cs4212-util
   blinn_phong_shader.cc
   rubiks_cube.h
   rubiks_cube.cc
+  mirror_shader.cc 
+  mirror_shader.h
 )
 target_compile_definitions(cs4212-util PUBLIC HAS_GLM)
 target_link_libraries(cs4212-util PRIVATE Boost::program_options)
