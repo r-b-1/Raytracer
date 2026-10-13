@@ -27,7 +27,7 @@ int main() {
     cam.lookfrom = point3(0, 0, 0);
     cam.lookat = point3(0, 0, -1.5);
 
-    cam.samples_per_pixel = 100;
+    cam.samples_per_pixel = 10;
     
     cam.render(scene, "shaded.png");
 
