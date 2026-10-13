@@ -14,15 +14,17 @@ public:
     point3 lookfrom = point3(0, 0, 0);
     point3 lookat = point3(0, 0, 0);
     vec3 vup = vec3(0, 1, 0);
+    int samples_per_pixel = 10;
 
     void render(const Scene& scene, const std::string& filename = "image.png") {
         initialize();
         for (int j = 0; j < image_height; j++) {
             for (int i = 0; i < image_width; i++) {
-                auto u = double(i);
-                auto v = double(j);
-                auto pixel_color = ray_color(
-                    make_ray(pixel00_loc + u * pixel_delta_u + v * pixel_delta_v), scene);
+                color pixel_color(0, 0, 0);
+                for (int s = 0; s < samples_per_pixel; s++) {
+                    pixel_color += ray_color(get_ray(i, j), scene);
+                }
+                pixel_color *= pixel_samples_scale;
                 framebuffer.setPixel(i, j, pixel_color);
             }
         }
@@ -30,6 +32,7 @@ public:
     }
 
 private:
+    float pixel_samples_scale;
     color ray_color(const ray& r, const Scene& scene) const {
         double tmax = std::numeric_limits<double>::infinity();
         HitStruct rec;
@@ -59,6 +62,7 @@ private:
         vec3 u = unit_vector(cross(vup, w)); // Camera right
         vec3 v = cross(w, u);               // Camera up
 
+        pixel_samples_scale = 1.0f / static_cast<float>(samples_per_pixel);
         auto focal_length = 1.0;
         auto viewport_height = 2.0;
         auto viewport_width = viewport_height * (double(image_width) / image_height);
@@ -78,6 +82,23 @@ private:
         pixel00_loc =
             viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
     }
+
+    ray get_ray(int i, int j) const {
+        // Construct a camera ray originating from the origin and directed at randomly sampled
+        // point around the pixel location i, j.
+
+        auto offset = sample_square();
+        auto pixel_sample = pixel00_loc
+                          + ((i + offset.x()) * pixel_delta_u)
+                          + ((j + offset.y()) * pixel_delta_v);
+
+        return make_ray(pixel_sample);
+    }
+
+    vec3 sample_square() const {
+        // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
+        return vec3(random_double() - 0.5, random_double() - 0.5, 0);
+    }    
 
 protected:
     point3 camera_center;

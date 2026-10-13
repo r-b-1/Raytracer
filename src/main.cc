@@ -7,6 +7,7 @@
 #include "scene.h"
 #include "sphere.h"
 #include "rubiks_cube.h"
+#include "triangle.h"
 
 int main() {
     Scene scene;
@@ -25,6 +26,9 @@ int main() {
     PerspectiveCamera cam;
     cam.lookfrom = point3(0, 0, 0);
     cam.lookat = point3(0, 0, -1.5);
+
+    cam.samples_per_pixel = 100;
+    
     cam.render(scene, "shaded.png");
 
     Scene lambert_scene;
@@ -91,7 +95,11 @@ int main() {
     auto black = std::make_shared<LambertianShader>(
         color(0.03, 0.03, 0.03), rubiks_scene.light);
 
+    auto grey = std::make_shared<LambertianShader>(
+        color(0.25, 0.25, 0.25), rubiks_scene.light);
+
     add_rubiks_cube(rubiks_scene, black);
+    rubiks_scene.objects.push_back(std::make_shared<triangle>(point3(1000, 0, -1000), point3(-1000, 0, -1000), point3(0, 0, 1000), grey));
 
     rubiks_cam.render(rubiks_scene, "rubiks.png");
 
