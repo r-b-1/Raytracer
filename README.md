@@ -163,3 +163,7 @@ Run the renderer:
 
 It writes PNG files directly to the current directory, including `rubiks.png`
 and `rubiks_opposite.png`.
+
+
+This is used to fix the dependency issue: 
+```brew install libomp```

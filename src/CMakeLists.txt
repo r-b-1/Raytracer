@@ -30,3 +30,9 @@ add_library (cs4212-util
 target_compile_definitions(cs4212-util PUBLIC HAS_GLM)
 target_link_libraries(cs4212-util PRIVATE Boost::program_options)
 target_link_libraries(cs4212-util PUBLIC glm::glm)
+
+# camera.h carries a `#pragma omp parallel for`, so every translation unit that
+# includes it needs both the OpenMP compile flag and the runtime.
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(cs4212-util PUBLIC OpenMP::OpenMP_CXX)
+endif()

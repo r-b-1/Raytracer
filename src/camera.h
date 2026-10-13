@@ -18,6 +18,7 @@ public:
 
     void render(const Scene& scene, const std::string& filename = "image.png") {
         initialize();
+        #pragma omp parallel for
         for (int j = 0; j < image_height; j++) {
             for (int i = 0; i < image_width; i++) {
                 color pixel_color(0, 0, 0);

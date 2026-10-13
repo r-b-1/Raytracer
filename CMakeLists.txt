@@ -83,6 +83,36 @@ find_package(glfw3 CONFIG REQUIRED)
 # not using Vulkan at the moment
 # find_package(Vulkan)
 
+# --------------------------------------------------------------------
+# OpenMP
+#
+# AppleClang rejects -fopenmp outright; the OpenMP runtime has to come from
+# Homebrew's libomp and -fopenmp has to go through the preprocessor. Point
+# FindOpenMP at that runtime so it can detect OpenMP instead of failing.
+# --------------------------------------------------------------------
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  find_library(
+    OpenMP_omp_LIBRARY
+    NAMES omp
+    HINTS /opt/homebrew/opt/libomp/lib /usr/local/opt/libomp/lib)
+  find_path(
+    OpenMP_CXX_INCLUDE_DIR
+    NAMES omp.h
+    HINTS /opt/homebrew/opt/libomp/include /usr/local/opt/libomp/include)
+  if(OpenMP_omp_LIBRARY)
+    set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -I${OpenMP_CXX_INCLUDE_DIR}")
+    set(OpenMP_CXX_LIB_NAMES omp)
+    set(OpenMP_CXX_LIBRARIES ${OpenMP_omp_LIBRARY})
+  endif()
+endif()
+
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+  message(STATUS "OpenMP enabled: ${OpenMP_CXX_FLAGS}")
+else()
+  message(STATUS "OpenMP not available - rendering will be single-threaded.")
+endif()
+
 # Add the src directory to build the library.
 add_subdirectory(src)
 
