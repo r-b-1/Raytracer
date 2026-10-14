@@ -14,7 +14,7 @@
 // Recreates the reference scene described in test_scene.txt: a grey floor, two
 // mirror walls at the back, and a cluster of coloured shapes, with two lights
 // (one to either side) reaching every surface.
-void render_test_scene(const int samples = 100, const int size = 500) {
+void render_test_scene(const int samples = 100, const int size = 1000) {
     Scene scene;
 
     const std::vector<PointLight> lights{

@@ -10,8 +10,8 @@
 class camera {
 public:
     float aspect_ratio = 1;
-    int image_width = 500;
-    int image_height = 500;
+    int image_width = 1000;
+    int image_height = 1000;
     point3 lookfrom = point3(0, 0, 0);
     point3 lookat = point3(0, 0, 0);
     vec3 vup = vec3(0, 1, 0);
