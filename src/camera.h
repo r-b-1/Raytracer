@@ -1,6 +1,9 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include <atomic>
+#include <iostream>
+
 #include "color.h"
 #include "hittable.h"
 #include "framebuffer.h"
@@ -24,8 +27,20 @@ public:
     float focal_length = 1.0;
     float image_plane_height = 2.0;
 
+    // Rows between progress updates. Too small and the terminal is flooded;
+    // too large and the bar stalls between frames.
+    int progress_interval = 10;
+
     void render(const Scene& scene, const std::string& filename = "image.png") {
         initialize();
+
+        // The render loop is parallel, so completion is counted rather than
+        // reported per iteration; each thread bumps the same counter.
+        std::atomic<int> rows_done{0};
+        const int total_rows = image_height;
+
+        std::clog << "\rRendering rows: 0/" << total_rows << " (0%)  " << std::flush;
+
         #pragma omp parallel for
         for (int j = 0; j < image_height; j++) {
             for (int i = 0; i < image_width; i++) {
@@ -36,7 +51,21 @@ public:
                 pixel_color *= pixel_samples_scale;
                 framebuffer.setPixel(i, j, pixel_color);
             }
+
+            const int done = rows_done.fetch_add(1) + 1;
+            if (done % progress_interval == 0 || done == total_rows) {
+                // Writes are flushed without a newline so the bar overwrites in
+                // place; the newline below ends it once encoding is done.
+                #pragma omp critical
+                {
+                    const int percent = (100 * done) / total_rows;
+                    std::clog << "\rRendering rows: " << done << '/' << total_rows
+                              << " (" << percent << "%)  " << std::flush;
+                }
+            }
         }
+        std::clog << '\n';
+
         framebuffer.exportAsPNG(filename);
     }
 
