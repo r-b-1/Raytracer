@@ -3,7 +3,8 @@
 
 #include "shader.h"
 
-// Diffuse shading with a specular highlight.
+// Diffuse shading with a specular highlight, summed over every light on the
+// material.
 class BlinnPhongShader : public Shader {
 public:
     BlinnPhongShader(const color& baseColor = color(0.8, 0.8, 0.8),
@@ -17,7 +18,18 @@ public:
           shininess_(shininess),
           specular_strength_(specular_strength) {}
 
-    color rayColor(const HitStruct& h) const override;
+    BlinnPhongShader(const color& baseColor,
+                     const std::vector<PointLight>& lights,
+                     const color& specular = color(1, 1, 1),
+                     float shininess = 32.0f,
+                     float specular_strength = 1.0f)
+        : Shader(lights),
+          baseColor_(baseColor),
+          specular_(specular),
+          shininess_(shininess),
+          specular_strength_(specular_strength) {}
+
+    color rayColor(const HitStruct& h, const Scene& scene, int depth) const override;
 
     float shininess() const { return shininess_; }
 

@@ -7,6 +7,10 @@
 #include "normal_shader.h"
 #include "shader.h"
 
+// Ignore hits this close to the ray origin so a surface cannot intersect the
+// ray that spawned it. Every trace (camera and reflection alike) starts here.
+inline constexpr double k_min_hit_t = 0.001;
+
 // Intersection data used by shaders.
 class HitStruct {
 public:

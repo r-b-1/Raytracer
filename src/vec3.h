@@ -110,6 +110,11 @@ inline vec3 unit_vector(const vec3& v) {
     return v / v.length(); // This i used to calculate the unit vector of a vector.
 }
 
+// Reflect v about a unit normal n.
+inline vec3 reflect(const vec3& v, const vec3& n) {
+    return v - 2*dot(v, n)*n;
+}
+
 inline vec3 random_unit_vector() {
     while (true) {
         auto p = vec3::random(-1,1);

@@ -1,14 +1,14 @@
-#include "mirror.h"
+#include "mirror_shader.h"
 
-#include <algorithm>
+#include "scene.h"
 
-#include "shape.h"
+color MirrorShader::rayColor(const HitStruct& h, const Scene& scene, int depth) const {
+    // Reflect the incoming ray about the surface normal. The camera stores
+    // that direction on the hit, the same way the other shaders read it.
+    vec3 reflected = unit_vector(reflect(h.ray_direction(), h.normal()));
 
-color MirrorShader::rayColor(const HitStruct& h) const {
-    vec3 lightDir = unit_vector(light().position() - h.p());
-
-    // Surfaces facing away from the light receive no direct light.
-    float nDotl = std::max(0.0f, dot(h.normal(), lightDir));
-
-    return baseColor_ * nDotl;
+    // Trace the reflected ray through the scene, so the surface shows the
+    // other objects and not just the sky. Spending a bounce keeps recursive
+    // reflections (two mirrors facing each other) terminating.
+    return baseColor_ * trace(scene, ray(h.p(), reflected), depth - 1);
 }

@@ -1,4 +1,5 @@
 #include <memory>
+#include <vector>
 
 #include "lambertian_shader.h"
 #include "blinn_phong_shader.h"
@@ -8,6 +9,76 @@
 #include "sphere.h"
 #include "rubiks_cube.h"
 #include "triangle.h"
+#include "mirror_shader.h"
+
+// Recreates the reference scene described in test_scene.txt: a grey floor, two
+// mirror walls at the back, and a cluster of coloured shapes, with two lights
+// (one to either side) reaching every surface.
+void render_test_scene(const int samples = 100, const int size = 500) {
+    Scene scene;
+
+    const std::vector<PointLight> lights{
+        PointLight(point3(-5, 8, 5), color(0.7, 0.6, 0.45)),
+        PointLight(point3(6, 6, 2), color(0.35, 0.45, 0.7)),
+    };
+
+    auto grey = std::make_shared<LambertianShader>(color(0.6, 0.6, 0.6), lights);
+    auto yellow = std::make_shared<LambertianShader>(color(0.9, 0.8, 0.1), lights);
+    auto green = std::make_shared<LambertianShader>(color(0.2, 0.8, 0.2), lights);
+    auto teal = std::make_shared<LambertianShader>(color(0.2, 0.7, 0.7), lights);
+    auto purple = std::make_shared<LambertianShader>(color(0.6, 0.2, 0.8), lights);
+    auto mirror = std::make_shared<MirrorShader>(color(0.8, 0.8, 0.8), lights);
+    auto red = std::make_shared<BlinnPhongShader>(
+        color(0.8, 0.1, 0.1), lights, color(1, 1, 1), 64.0f);
+    auto blue = std::make_shared<BlinnPhongShader>(
+        color(0.1, 0.2, 0.8), lights, color(1, 1, 1), 16.0f);
+    auto orange = std::make_shared<BlinnPhongShader>(
+        color(0.95, 0.5, 0.1), lights, color(1, 1, 1), 32.0f);
+
+    // --- Triangles ---
+
+    // The floor, as two triangles sharing the diagonal from (-50, 0, 50).
+    scene.objects.push_back(std::make_shared<triangle>(
+        point3(-50, 0, 50), point3(50, 0, 50), point3(50, 0, -50), grey));
+    scene.objects.push_back(std::make_shared<triangle>(
+        point3(-50, 0, 50), point3(50, 0, -50), point3(-50, 0, -50), grey));
+
+    // The two mirrored walls at the back of the room.
+    scene.objects.push_back(std::make_shared<triangle>(
+        point3(-4, 0, -6), point3(4, 0, -6), point3(4, 4, -6), mirror));
+    scene.objects.push_back(std::make_shared<triangle>(
+        point3(-4, 0, -6), point3(4, 4, -6), point3(-4, 4, -6), mirror));
+
+    scene.objects.push_back(std::make_shared<triangle>(
+        point3(0.9, 1.4, -0.6), point3(1.9, 1.4, -0.6), point3(1.4, 2.2, -1.1), yellow));
+
+    // --- Spheres ---
+
+    scene.objects.push_back(std::make_shared<sphere>(point3(-2, 0.8, -3), 0.8, green));
+    scene.objects.push_back(std::make_shared<sphere>(point3(-1.1, 0.6, -1.2), 0.6, red));
+    scene.objects.push_back(std::make_shared<sphere>(
+        point3(0, 0.9, -3.5), 0.9, std::make_shared<NormalShader>()));
+    scene.objects.push_back(std::make_shared<sphere>(point3(0.3, 0.45, -1.6), 0.45, blue));
+    scene.objects.push_back(std::make_shared<sphere>(point3(2, 1, -3), 1, mirror));
+    scene.objects.push_back(std::make_shared<sphere>(point3(1.5, 0.5, 0.3), 0.5, mirror));
+    scene.objects.push_back(std::make_shared<sphere>(point3(-1.3, 0.45, 0.4), 0.45, teal));
+
+    // Behind the camera: only ever seen in the mirrors.
+    scene.objects.push_back(std::make_shared<sphere>(point3(0.3, 1, 5), 1, orange));
+    scene.objects.push_back(std::make_shared<sphere>(point3(2.4, 0.8, 4.8), 0.8, purple));
+
+    PerspectiveCamera cam;
+    cam.lookfrom = point3(0, 3, 3);
+    cam.lookat = point3(0, 2.6, 2); // lookfrom + the specified view direction
+    cam.focal_length = 0.4;
+    cam.image_plane_height = 0.5;
+    cam.max_depth = 5;
+    cam.samples_per_pixel = samples;
+    cam.image_width = size;
+    cam.image_height = size;
+
+    cam.render(scene, "scene_perspective.png");
+}
 
 int main() {
     Scene scene;
@@ -36,6 +107,23 @@ int main() {
     lambert_scene.objects.push_back(
         std::make_shared<sphere>(point3(0, 0, -1), 0.6, std::make_shared<LambertianShader>(color(0.95, 0.95, 0.15), scene.light)));
     cam.render(lambert_scene, "lambertian.png");
+
+    Scene mirror_scene;
+    mirror_scene.light = scene.light;
+
+    // A flat mirror as the floor. A mirror *sphere* only reflects a ~53 degree
+    // cone around the camera axis, so it can show nothing but sky and ground;
+    // a flat one reflects the objects resting on it.
+    mirror_scene.objects.push_back(
+        std::make_shared<triangle>(point3(-20, 0, -20), point3(20, 0, -20), point3(0, 0, 20),
+                                   std::make_shared<MirrorShader>(color(0.85, 0.85, 0.85), mirror_scene.light)));
+    mirror_scene.objects.push_back(std::make_shared<sphere>(point3(-0.6, 1.2, -0.5), 0.55, matte));
+    mirror_scene.objects.push_back(std::make_shared<sphere>(point3(0.9, 0.6, 0.3), 0.4, shiny));
+
+    PerspectiveCamera mirror_cam;
+    mirror_cam.lookfrom = point3(0, 2.0, 3.5);
+    mirror_cam.lookat = point3(0, 0.6, -0.5);
+    mirror_cam.render(mirror_scene, "mirror.png");
 
     Scene phong_scene;
     phong_scene.light = scene.light;
@@ -108,6 +196,9 @@ int main() {
 //     rubiks_orth_cam.lookfrom = point3(1, 2, 5);
 //     rubiks_orth_cam.lookat = point3(0, 1, 4);
 //     rubiks_orth_cam.render(rubiks_scene, "rubiks_orth.png");
+
+    render_test_scene();
+
 }
 
 

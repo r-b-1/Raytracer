@@ -1,6 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include "color.h"
 #include "hittable.h"
 #include "framebuffer.h"
 
@@ -15,6 +16,13 @@ public:
     point3 lookat = point3(0, 0, 0);
     vec3 vup = vec3(0, 1, 0);
     int samples_per_pixel = 10;
+    int max_depth = 50; // Maximum reflection bounces per ray.
+
+    // Projection: the image plane sits `focal_length` in front of the eye and
+    // spans `image_plane_height` there, so a half-height of image_plane_height
+    // / 2 subtends atan(image_plane_height / 2 / focal_length).
+    float focal_length = 1.0;
+    float image_plane_height = 2.0;
 
     void render(const Scene& scene, const std::string& filename = "image.png") {
         initialize();
@@ -23,7 +31,7 @@ public:
             for (int i = 0; i < image_width; i++) {
                 color pixel_color(0, 0, 0);
                 for (int s = 0; s < samples_per_pixel; s++) {
-                    pixel_color += ray_color(get_ray(i, j), scene);
+                    pixel_color += trace(scene, get_ray(i, j), max_depth);
                 }
                 pixel_color *= pixel_samples_scale;
                 framebuffer.setPixel(i, j, pixel_color);
@@ -34,22 +42,6 @@ public:
 
 private:
     float pixel_samples_scale;
-    color ray_color(const ray& r, const Scene& scene) const {
-        double tmax = std::numeric_limits<double>::infinity();
-        HitStruct rec;
-        if (scene.intersect(r, k_tmin, tmax, rec)) {
-            if (rec.shader())
-                return rec.shader()->rayColor(rec);
-            return 0.5f * (rec.normal() + color(1, 1, 1));
-        }
-        vec3 unit_direction = unit_vector(r.direction());
-        auto a = 0.5 * (unit_direction.y() + 1.0);
-        return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
-    }
-
-    // Ignore intersections at the ray origin to avoid self-intersections.
-    static constexpr double k_tmin = 0.001;
-
     Framebuffer framebuffer;
 
     void initialize() {
@@ -64,8 +56,7 @@ private:
         vec3 v = cross(w, u);               // Camera up
 
         pixel_samples_scale = 1.0f / static_cast<float>(samples_per_pixel);
-        auto focal_length = 1.0;
-        auto viewport_height = 2.0;
+        auto viewport_height = double(image_plane_height);
         auto viewport_width = viewport_height * (double(image_width) / image_height);
 
         auto viewport_u = viewport_width * u;

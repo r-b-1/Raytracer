@@ -5,22 +5,27 @@
 
 #include "shape.h"
 
-color BlinnPhongShader::rayColor(const HitStruct& h) const {
-    vec3 lightDir = unit_vector(light().position() - h.p());
+color BlinnPhongShader::rayColor(const HitStruct& h, const Scene&, int) const {
+    color out(0, 0, 0);
 
     // Reverse the incoming ray to point back toward the viewer.
     vec3 viewDir = unit_vector(-h.ray_direction());
 
-    vec3 halfVector = unit_vector(lightDir + viewDir);
+    for (const auto& light : lights()) {
+        vec3 lightDir = unit_vector(light.position() - h.p());
 
-    float nDotl = std::max(0.0f, dot(h.normal(), lightDir));
+        // Suppress the highlight on the unlit side.
+        float nDotl = dot(h.normal(), lightDir);
+        if (nDotl <= 0.0f)
+            continue;
 
-    // Suppress highlights on the unlit side.
-    if (nDotl <= 0.0f)
-        return color(0, 0, 0);
+        vec3 halfVector = unit_vector(lightDir + viewDir);
 
-    float nDoth = std::max(0.0f, dot(h.normal(), halfVector));
-    float highlight = std::pow(nDoth, shininess_) * specular_strength_;
+        float nDoth = std::max(0.0f, dot(h.normal(), halfVector));
+        float highlight = std::pow(nDoth, shininess_) * specular_strength_;
 
-    return baseColor_ * nDotl + specular_ * highlight;
+        out += light.intensity() * (baseColor_ * nDotl + specular_ * highlight);
+    }
+
+    return out;
 }

@@ -4,11 +4,17 @@
 
 #include "shape.h"
 
-color LambertianShader::rayColor(const HitStruct& h) const {
-    vec3 lightDir = unit_vector(light().position() - h.p());
+color LambertianShader::rayColor(const HitStruct& h, const Scene&, int) const {
+    color out(0, 0, 0);
 
-    // Surfaces facing away from the light receive no direct light.
-    float nDotl = std::max(0.0f, dot(h.normal(), lightDir));
+    for (const auto& light : lights()) {
+        vec3 lightDir = unit_vector(light.position() - h.p());
 
-    return baseColor_ * nDotl;
+        // Surfaces facing away from a light receive none of its direct light.
+        float nDotl = std::max(0.0f, dot(h.normal(), lightDir));
+
+        out += light.intensity() * (baseColor_ * nDotl);
+    }
+
+    return out;
 }

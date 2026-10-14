@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <memory>
 #include <vector>
 
@@ -28,3 +29,23 @@ public:
         return found;
     }
 };
+
+// Trace one ray and return the color seen along it: the shading of the first
+// surface it hits, or the sky if it escapes. `depth` is the remaining
+// reflection budget, so recursive bounces terminate. Shared by the camera and
+// by materials that trace secondary rays, so both resolve hits the same way.
+inline color trace(const Scene& scene, const ray& r, int depth) {
+    if (depth <= 0)
+        return color(0, 0, 0); // Out of bounces; absorbing rather than recursing.
+
+    double tmax = std::numeric_limits<double>::infinity();
+    HitStruct rec;
+
+    if (scene.intersect(r, k_min_hit_t, tmax, rec)) {
+        if (rec.shader())
+            return rec.shader()->rayColor(rec, scene, depth);
+        return 0.5f * (rec.normal() + color(1, 1, 1)); // Fallback for an unshaded hit.
+    }
+
+    return sky_color(r.direction());
+}
