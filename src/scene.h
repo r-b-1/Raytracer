@@ -49,3 +49,19 @@ inline color trace(const Scene& scene, const ray& r, int depth) {
 
     return sky_color(r.direction());
 }
+
+// True when something blocks the line from `p` to `light_pos`.
+inline bool occluded(const Scene& scene, const point3& p, const vec3& normal,
+                     const point3& light_pos) {
+    const vec3 to_light = light_pos - p;
+    const float dist = to_light.length();
+
+    // Step off the surface before testing. Without this the shadow ray starts
+    // exactly on the surface it is testing and hits it immediately, so
+    // everything would read as shadowed.
+    const point3 origin = p + k_shadow_eps * normal;
+
+    double tmax = dist;   // A hit *beyond* the light does not block it.
+    HitStruct rec;
+    return scene.intersect(ray(origin, to_light), k_min_hit_t, tmax, rec);
+}

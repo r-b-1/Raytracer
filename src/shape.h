@@ -10,6 +10,7 @@
 // Ignore hits this close to the ray origin so a surface cannot intersect the
 // ray that spawned it. Every trace (camera and reflection alike) starts here.
 inline constexpr double k_min_hit_t = 0.001;
+inline constexpr float k_shadow_eps = 1e-4f;
 
 // Intersection data used by shaders.
 class HitStruct {

@@ -3,9 +3,10 @@
 #include <algorithm>
 #include <cmath>
 
+#include "scene.h"
 #include "shape.h"
 
-color BlinnPhongShader::rayColor(const HitStruct& h, const Scene&, int) const {
+color BlinnPhongShader::rayColor(const HitStruct& h, const Scene& scene, int) const {
     color out(0, 0, 0);
 
     // Reverse the incoming ray to point back toward the viewer.
@@ -17,6 +18,10 @@ color BlinnPhongShader::rayColor(const HitStruct& h, const Scene&, int) const {
         // Suppress the highlight on the unlit side.
         float nDotl = dot(h.normal(), lightDir);
         if (nDotl <= 0.0f)
+            continue;
+
+        // Reject on the cheap dot product before paying for a shadow ray.
+        if (occluded(scene, h.p(), h.normal(), light.position()))
             continue;
 
         vec3 halfVector = unit_vector(lightDir + viewDir);
