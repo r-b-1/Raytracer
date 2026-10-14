@@ -67,17 +67,29 @@ void render_test_scene(const int samples = 100, const int size = 1000) {
     scene.objects.push_back(std::make_shared<sphere>(point3(0.3, 1, 5), 1, orange));
     scene.objects.push_back(std::make_shared<sphere>(point3(2.4, 0.8, 4.8), 0.8, purple));
 
-    PerspectiveCamera cam;
-    cam.lookfrom = point3(0, 3, 3);
-    cam.lookat = point3(0, 2.6, 2); // lookfrom + the specified view direction
-    cam.focal_length = 0.4;
-    cam.image_plane_height = 0.5;
-    cam.max_depth = 5;
-    cam.samples_per_pixel = samples;
-    cam.image_width = size;
-    cam.image_height = size;
+    PerspectiveCamera pcam;
+    pcam.lookfrom = point3(0, 3, 3);
+    pcam.lookat = point3(0, 2.6, 2); // lookfrom + the specified view direction
+    pcam.focal_length = 0.4;
+    pcam.image_plane_height = 0.5;
+    pcam.max_depth = 5;
+    pcam.samples_per_pixel = samples;
+    pcam.image_width = size;
+    pcam.image_height = size;
 
-    cam.render(scene, "scene_perspective.png");
+    pcam.render(scene, "scene_perspective.png");
+
+    OrthographicCamera ocam;
+    ocam.lookfrom = point3(0, 3, 3);
+    ocam.lookat = point3(0, 2.6, 2); // lookfrom + the specified view direction
+    ocam.focal_length = 0.4;
+    ocam.image_plane_height = 5;
+    ocam.max_depth = 5;
+    ocam.samples_per_pixel = samples;
+    ocam.image_width = size;
+    ocam.image_height = size;
+
+    ocam.render(scene, "scene_orthographic.png");
 }
 
 int main() {
