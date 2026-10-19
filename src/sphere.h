@@ -6,14 +6,14 @@
 #include "shape.h"
 #include "vec3.h"
 
-class sphere : public Shape {
+class Sphere : public Shape {
 public:
-    sphere(const point3& center, double radius,
+    Sphere(const Point3& center, float radius,
            std::shared_ptr<Shader> shader = std::make_shared<NormalShader>())
-        : Shape(std::move(shader)), center(center), radius(std::fmax(0, radius)) {}
+        : Shape(std::move(shader)), center(center), radius(std::fmax(0.0f, radius)) {}
 
-    bool intersect(const ray& r, double tmin, double& tmax, HitStruct& hit) const override {
-        vec3 oc = center - r.origin();
+    bool intersect(const Ray& r, float tmin, float& tmax, HitStruct& hit) const override {
+        Vec3 oc = center - r.origin();
         auto a = r.direction().length_squared();
         auto h = dot(r.direction(), oc);
         auto c = oc.length_squared() - radius*radius;
@@ -41,8 +41,8 @@ public:
     }
 
 private:
-    point3 center;
-    double radius;
+    Point3 center;
+    float radius;
 };
 
 #endif

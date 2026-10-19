@@ -1,4 +1,5 @@
-#pragma once
+#ifndef RUBIKS_CUBE_H
+#define RUBIKS_CUBE_H
 
 #include <memory>
 
@@ -8,3 +9,5 @@
 // Top, front, and right tiles have highlight lights for the main camera view.
 // The other tiles use scene.light; the base uses the supplied shader.
 void add_rubiks_cube(Scene& scene, const std::shared_ptr<Shader>& base_shader);
+
+#endif

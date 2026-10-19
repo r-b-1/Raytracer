@@ -1,7 +1,9 @@
+#ifndef FRAMEBUFFER_H
+#define FRAMEBUFFER_H
+
 #include <vector>
 #include <string>
 #include "vec3.h"
-#pragma once
 
 class Framebuffer {
     public:
@@ -13,12 +15,14 @@ class Framebuffer {
 
         void clear();
 
-        void setPixel( int i, int j, const vec3& c );
+        void setPixel( int i, int j, const Vec3& c );
 
         void exportAsPNG( std::string filename );
 
         private:
 
-        std::vector< vec3 > fb;
+        std::vector< Vec3 > fb;
         int width, height;
 };
+
+#endif

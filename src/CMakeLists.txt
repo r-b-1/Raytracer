@@ -13,8 +13,7 @@ add_library (cs4212-util
   triangle.h
   scene.h
   framebuffer.h
-  framebuffer.cc  
-  interval.h
+  framebuffer.cc
   triangle.h
   point_light.h
   shader.h

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SCENE_H
+#define SCENE_H
 
 #include <limits>
 #include <memory>
@@ -13,7 +14,7 @@ public:
 
     PointLight light;
 
-    bool intersect(const ray& r, double tmin, double& tmax, HitStruct& hit) const {
+    bool intersect(const Ray& r, float tmin, float& tmax, HitStruct& hit) const {
         bool found = false;
 
         for (const auto& object : objects) {
@@ -34,37 +35,39 @@ public:
 // surface it hits, or the sky if it escapes. `depth` is the remaining
 // reflection budget, so recursive bounces terminate. Shared by the camera and
 // by materials that trace secondary rays, so both resolve hits the same way.
-inline color trace(const Scene& scene, const ray& r, int depth) {
+inline Color trace(const Scene& scene, const Ray& r, int depth) {
     if (depth <= 0)
-        return color(0, 0, 0); // Out of bounces; absorbing rather than recursing.
+        return Color(0, 0, 0); // Out of bounces; absorbing rather than recursing.
 
-    double tmax = std::numeric_limits<double>::infinity();
+    float tmax = std::numeric_limits<float>::infinity();
     HitStruct rec;
 
     if (scene.intersect(r, k_min_hit_t, tmax, rec)) {
         if (rec.shader())
             return rec.shader()->rayColor(rec, scene, depth);
-        return 0.5f * (rec.normal() + color(1, 1, 1)); // Fallback for an unshaded hit.
+        return 0.5f * (rec.normal() + Color(1, 1, 1)); // Fallback for an unshaded hit.
     }
 
     return sky_color(r.direction());
 }
 
 // True when something blocks the line from `p` to `light_pos`.
-inline bool occluded(const Scene& scene, const point3& p, const vec3& normal,
-                     const point3& light_pos) {
-    const vec3 to_light = light_pos - p;
+inline bool occluded(const Scene& scene, const Point3& p, const Vec3& normal,
+                     const Point3& light_pos) {
+    const Vec3 to_light = light_pos - p;
 
     // Step off the surface before testing. Without this the shadow ray starts
     // exactly on the surface it is testing and hits it immediately, so
     // everything would read as shadowed.
-    const point3 origin = p + k_shadow_eps * normal;
+    const Point3 origin = p + k_shadow_eps * normal;
 
     // Shape::intersect reports t in units of the direction vector, so the
     // direction must be normalized before tmax can be a distance. Left
     // unnormalized, tmax would be squared by |direction| and the ray would
     // reach far past the light.
-    double tmax = to_light.length(); // A hit *beyond* the light does not block.
+    float tmax = to_light.length(); // A hit *beyond* the light does not block.
     HitStruct rec;
-    return scene.intersect(ray(origin, unit_vector(to_light)), k_min_hit_t, tmax, rec);
+    return scene.intersect(Ray(origin, unit_vector(to_light)), k_min_hit_t, tmax, rec);
 }
+
+#endif

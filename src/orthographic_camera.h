@@ -1,12 +1,14 @@
-
-#pragma once
+#ifndef ORTHOGRAPHIC_CAMERA_H
+#define ORTHOGRAPHIC_CAMERA_H
 
 #include "camera.h"
 
-class OrthographicCamera : public camera {
+class OrthographicCamera : public Camera {
     protected:
-    ray make_ray(const point3& pixel_position) const override {
+    Ray make_ray(const Point3& pixel_position) const override {
 
-        return ray(pixel_position, -w);
+        return Ray(pixel_position, -w);
     }
 };
+
+#endif

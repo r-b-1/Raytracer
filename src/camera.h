@@ -5,19 +5,18 @@
 #include <iostream>
 
 #include "color.h"
-#include "hittable.h"
 #include "framebuffer.h"
 
 #include "scene.h"
 
-class camera {
+class Camera {
 public:
     float aspect_ratio = 1;
     int image_width = 1000;
     int image_height = 1000;
-    point3 lookfrom = point3(0, 0, 0);
-    point3 lookat = point3(0, 0, 0);
-    vec3 vup = vec3(0, 1, 0);
+    Point3 lookfrom = Point3(0, 0, 0);
+    Point3 lookat = Point3(0, 0, 0);
+    Vec3 vup = Vec3(0, 1, 0);
     int samples_per_pixel = 10;
     int max_depth = 50; // Maximum reflection bounces per ray.
 
@@ -44,7 +43,7 @@ public:
         #pragma omp parallel for
         for (int j = 0; j < image_height; j++) {
             for (int i = 0; i < image_width; i++) {
-                color pixel_color(0, 0, 0);
+                Color pixel_color(0, 0, 0);
                 for (int s = 0; s < samples_per_pixel; s++) {
                     pixel_color += trace(scene, get_ray(i, j), max_depth);
                 }
@@ -81,12 +80,12 @@ private:
         camera_center = lookfrom;
 
         w = unit_vector(lookfrom - lookat);  // Camera backward
-        vec3 u = unit_vector(cross(vup, w)); // Camera right
-        vec3 v = cross(w, u);               // Camera up
+        Vec3 u = unit_vector(cross(vup, w)); // Camera right
+        Vec3 v = cross(w, u);               // Camera up
 
         pixel_samples_scale = 1.0f / static_cast<float>(samples_per_pixel);
-        auto viewport_height = double(image_plane_height);
-        auto viewport_width = viewport_height * (double(image_width) / image_height);
+        auto viewport_height = float(image_plane_height);
+        auto viewport_width = viewport_height * (float(image_width) / image_height);
 
         auto viewport_u = viewport_width * u;
         // PNG rows run from top to bottom.
@@ -104,7 +103,7 @@ private:
             viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
     }
 
-    ray get_ray(int i, int j) const {
+    Ray get_ray(int i, int j) const {
         // Construct a camera ray originating from the origin and directed at randomly sampled
         // point around the pixel location i, j.
 
@@ -116,19 +115,19 @@ private:
         return make_ray(pixel_sample);
     }
 
-    vec3 sample_square() const {
+    Vec3 sample_square() const {
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
-        return vec3(random_double() - 0.5, random_double() - 0.5, 0);
+        return Vec3(random_float() - 0.5, random_float() - 0.5, 0);
     }    
 
 protected:
-    point3 camera_center;
-    vec3 w;
+    Point3 camera_center;
+    Vec3 w;
 
-    point3 pixel00_loc;
-    vec3 pixel_delta_u, pixel_delta_v;
+    Point3 pixel00_loc;
+    Vec3 pixel_delta_u, pixel_delta_v;
 
-    virtual ray make_ray(const point3& pixel_position) const = 0;
+    virtual Ray make_ray(const Point3& pixel_position) const = 0;
 };
 
 #endif
