@@ -8,20 +8,20 @@ This project uses CMake and [vcpkg](https://learn.microsoft.com/en-us/vcpkg/get_
 
 On macOS, the renderer also needs the OpenMP runtime:
 
-```sh
+```
 brew install cmake libomp
 ```
 
 From the project root:
 
-```sh
+```
 cmake --preset=default
 cmake --build buildVCPkg
 ```
 
 ## Run
 
-```sh
+```
 ./buildVCPkg/main --width [width] --height [height]
 ```
 
@@ -31,6 +31,6 @@ Running the program renders two scenes, one of them is the test scene with all s
 
 ## Tests
 
-```sh
+```
 ./buildVCPkg/utests/utest_Success
 ```
