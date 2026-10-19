@@ -1,6 +1,6 @@
 #include "rubiks_cube.h"
 
-#include "blinn_phong_shader.h"
+#include "mirror_shader.h"
 #include "triangle.h"
 
 // The edge order makes both triangles point in the same direction.
@@ -18,8 +18,6 @@ void add_rubiks_cube(Scene& scene, const std::shared_ptr<Shader>& base_shader) {
         Point3 origin;
         Vec3 u, v; // Unit directions across the face; cross(u, v) points outward.
         Color tile_color;
-        PointLight light;
-        float specular_strength = 1.0f;
     };
 
     constexpr float face_size = 3.0;
@@ -28,34 +26,26 @@ void add_rubiks_cube(Scene& scene, const std::shared_ptr<Shader>& base_shader) {
     constexpr float margin = 0.15;
     constexpr float tile_offset = 0.01;
 
-    // Only the three faces visible from (3, 5, 3) get dedicated highlight lights.
-    // The other faces use the scene light, like the black base.
+    // Each sticker is a mirror tinted with that face's color. From (3, 5, 3)
+    // the top, front, and right faces are the ones turned toward the camera.
     const Face faces[] = {
         // Bottom
-        {Point3(-1.5, 0, -1.5), Vec3(1, 0, 0), Vec3(0, 0, 1),
-         Color(0.5, 0, 0.5), scene.light},
+        {Point3(-1.5, 0, -1.5), Vec3(1, 0, 0), Vec3(0, 0, 1), Color(0.55, 0.1, 0.7)},
         // Back
-        {Point3(-1.5, 0, -1.5), Vec3(0, 1, 0), Vec3(1, 0, 0),
-         Color(0.5, 0.5, 0), scene.light},
+        {Point3(-1.5, 0, -1.5), Vec3(0, 1, 0), Vec3(1, 0, 0), Color(0.95, 0.85, 0.15)},
         // Left
-        {Point3(-1.5, 0, -1.5), Vec3(0, 0, 1), Vec3(0, 1, 0),
-         Color(0, 0.5, 0.5), scene.light},
+        {Point3(-1.5, 0, -1.5), Vec3(0, 0, 1), Vec3(0, 1, 0), Color(0.1, 0.75, 0.35)},
         // Right
-        {Point3(1.5, 0, -1.5), Vec3(0, 1, 0), Vec3(0, 0, 1),
-         Color(1, 0.5, 0.5), PointLight(Point3(4, -2, -3))},
+        {Point3(1.5, 0, -1.5), Vec3(0, 1, 0), Vec3(0, 0, 1), Color(1.0, 0.12, 0.08)},
         // Front
-        {Point3(-1.5, 0, 1.5), Vec3(1, 0, 0), Vec3(0, 1, 0),
-         Color(0.5, 0.5, 1), PointLight(Point3(-3, -2, 4))},
+        {Point3(-1.5, 0, 1.5), Vec3(1, 0, 0), Vec3(0, 1, 0), Color(0.1, 0.25, 1.0)},
         // Top
-        {Point3(-1.5, 3, -1.5), Vec3(0, 0, 1), Vec3(1, 0, 0),
-         Color(0.5, 1, 0.5), PointLight(Point3(-3, 5, -3)), 1.01f},
+        {Point3(-1.5, 3, -1.5), Vec3(0, 0, 1), Vec3(1, 0, 0), Color(1.0, 0.95, 0.9)},
     };
 
     for (const auto& face : faces) {
         add_square(scene, face.origin, face_size * face.u, face_size * face.v, base_shader);
-        auto tiles = std::make_shared<BlinnPhongShader>(
-            face.tile_color, Color(1, 1, 1), 64.0f, face.specular_strength,
-            face.light);
+        auto tiles = std::make_shared<MirrorShader>(face.tile_color);
         const Vec3 outward = cross(face.u, face.v);
 
         for (int row = 0; row < 3; ++row) {

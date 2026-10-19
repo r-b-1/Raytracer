@@ -27,7 +27,7 @@ cmake --build buildVCPkg
 
 With no size flags the images are 1000×1000. Passing only `--width` or only `--height` keeps the image square. `--aspect` overrides that ratio.
 
-Running the program renders two scenes, one of them is the test scene with all shaders using the orthographic and perspective camera and then the snowman scene where I made a snowman.
+Running the program renders three scenes. The test scene uses every shader and is drawn with both the orthographic and the perspective camera. The snowman is an original scene. The Rubik's cube has colored mirror tiles. The three faces turned toward the camera are the ones that are lit, and a mirror stands behind the cube.
 
 ## Tests
 

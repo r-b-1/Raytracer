@@ -11,6 +11,7 @@
 #include "sphere.h"
 #include "triangle.h"
 #include "mirror_shader.h"
+#include "rubiks_cube.h"
 
 
 void render_test_scene(int image_width, float aspect_ratio, int samples) {
@@ -174,6 +175,49 @@ int main(int argc, char* argv[]) {
     if (rpp_set)
         snowman_cam.samples_per_pixel = rpp;
     snowman_cam.render(snowman_scene, "snowman.png");
+
+    PerspectiveCamera rubiks_cam;
+    // Top, front, and right faces.
+    rubiks_cam.lookfrom = Point3(3, 5, 3);
+    rubiks_cam.lookat = Point3(0, 1.5, 0);
+    rubiks_cam.max_depth = 5;
+    rubiks_cam.image_width = image_width;
+    rubiks_cam.aspect_ratio = aspect_ratio;
+    if (rpp_set)
+        rubiks_cam.samples_per_pixel = rpp;
+
+    Scene rubiks_scene;
+    // Overhead, toward the camera, so the floor and the three near faces read bright.
+    // The far faces point the other way, so they stay dark.
+    rubiks_scene.light.set_position(Point3(2, 10, 2));
+    rubiks_scene.light.set_intensity(Color(1.8f, 1.8f, 1.8f));
+
+    auto black = std::make_shared<LambertianShader>(
+        Color(0.03, 0.03, 0.03), rubiks_scene.light);
+    auto floor = std::make_shared<LambertianShader>(
+        Color(0.55, 0.55, 0.58), rubiks_scene.light);
+    auto back_mirror = std::make_shared<MirrorShader>(Color(0.95, 0.95, 0.98));
+
+    add_rubiks_cube(rubiks_scene, black);
+
+    // Matte floor, just under the cube so the bottom face does not z-fight.
+    const float floor_y = -0.02f;
+    rubiks_scene.objects.push_back(std::make_shared<Triangle>(
+        Point3(-20, floor_y, 20), Point3(20, floor_y, 20), Point3(20, floor_y, -20), floor));
+    rubiks_scene.objects.push_back(std::make_shared<Triangle>(
+        Point3(-20, floor_y, 20), Point3(20, floor_y, -20), Point3(-20, floor_y, -20), floor));
+
+    // Mirror opposite the camera. The camera looks down along x and z together,
+    // so this wall faces back toward it instead of sitting parallel to the yellow face.
+    const Point3 wall(-10, 0, 5.5);
+    const Vec3 wall_u(12, 0, -12);
+    const Vec3 wall_v(0, 8, 0);
+    rubiks_scene.objects.push_back(std::make_shared<Triangle>(
+        wall, wall + wall_u, wall + wall_u + wall_v, back_mirror));
+    rubiks_scene.objects.push_back(std::make_shared<Triangle>(
+        wall, wall + wall_u + wall_v, wall + wall_v, back_mirror));
+
+    rubiks_cam.render(rubiks_scene, "rubiks.png");
 
     render_test_scene(image_width, aspect_ratio, rpp_set ? rpp : 100);
 }
