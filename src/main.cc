@@ -1,18 +1,19 @@
+#include <iostream>
 #include <memory>
 #include <vector>
 
+#include "handleGraphicsArgs.h"
 #include "lambertian_shader.h"
 #include "blinn_phong_shader.h"
 #include "perspective_camera.h"
 #include "orthographic_camera.h"
 #include "scene.h"
 #include "sphere.h"
-#include "rubiks_cube.h"
 #include "triangle.h"
 #include "mirror_shader.h"
 
 
-void render_test_scene(const int samples = 100, const int size = 1000) {
+void render_test_scene(int image_width, float aspect_ratio, int samples) {
     Scene scene;
 
     const std::vector<PointLight> lights{
@@ -72,8 +73,9 @@ void render_test_scene(const int samples = 100, const int size = 1000) {
     pcam.image_plane_height = 0.5;
     pcam.max_depth = 5;
     pcam.samples_per_pixel = samples;
-    pcam.image_width = size;
-    pcam.image_height = size;
+    // Height is derived from width and aspect ratio inside Camera::initialize.
+    pcam.image_width = image_width;
+    pcam.aspect_ratio = aspect_ratio;
 
     pcam.render(scene, "scene_perspective.png");
 
@@ -84,65 +86,53 @@ void render_test_scene(const int samples = 100, const int size = 1000) {
     ocam.image_plane_height = 5;
     ocam.max_depth = 5;
     ocam.samples_per_pixel = samples;
-    ocam.image_width = size;
-    ocam.image_height = size;
+    ocam.image_width = image_width;
+    ocam.aspect_ratio = aspect_ratio;
 
     ocam.render(scene, "scene_orthographic.png");
 }
 
-int main() {
-    Scene scene;
-    scene.light.set_position(Point3(0, 10, 5));
+int main(int argc, char* argv[]) {
+    sivelab::GraphicsArgs args;
+    try {
+        args.process(argc, argv);
+    } catch (const std::exception& e) {
+        std::cerr << e.what() << '\n';
+        args.printUsage();
+        return 1;
+    }
 
-    auto matte = std::make_shared<LambertianShader>(Color(0.95, 0.95, 0.15), scene.light);
-    auto shiny = std::make_shared<BlinnPhongShader>(Color(0.95, 0.95, 0.15),
-                                                   Color(1, 1, 1),
-                                                   64.0f,
-                                                   0.8f,
-                                                   scene.light);
+    // 1000x1000 unless the command line says otherwise. Passing only one
+    // dimension keeps the image square, matching the cameras' default aspect.
+    int image_width = 1000;
+    int image_height = 1000;
+    const bool width_set = args.isSet("width", image_width);
+    const bool height_set = args.isSet("height", image_height);
+    if (width_set && !height_set)
+        image_height = image_width;
+    else if (height_set && !width_set)
+        image_width = image_height;
 
-    scene.objects.push_back(std::make_shared<Sphere>(Point3(-0.7, 0, -1), 0.5, matte));
-    scene.objects.push_back(std::make_shared<Sphere>(Point3(0.7, 0, -1), 0.5, shiny));
+    if (image_width < 1 || image_height < 1) {
+        std::cerr << "Image width and height must be at least 1.\n";
+        return 1;
+    }
 
-    PerspectiveCamera cam;
-    cam.lookfrom = Point3(0, 0, 0);
-    cam.lookat = Point3(0, 0, -1.5);
+    float aspect_ratio = static_cast<float>(image_width) / static_cast<float>(image_height);
+    if (args.isSet("aspect", aspect_ratio) && aspect_ratio <= 0.0f) {
+        std::cerr << "Aspect ratio must be positive.\n";
+        return 1;
+    }
 
-    cam.samples_per_pixel = 10;
-    
-    cam.render(scene, "shaded.png");
-
-    Scene lambert_scene;
-    lambert_scene.light = scene.light;
-    lambert_scene.objects.push_back(
-        std::make_shared<Sphere>(Point3(0, 0, -1), 0.6, std::make_shared<LambertianShader>(Color(0.95, 0.95, 0.15), scene.light)));
-    cam.render(lambert_scene, "lambertian.png");
-
-    Scene mirror_scene;
-    mirror_scene.light = scene.light;
-
-    // A flat mirror as the floor. A mirror *sphere* only reflects a ~53 degree
-    // cone around the camera axis, so it can show nothing but sky and ground;
-    // a flat one reflects the objects resting on it.
-    mirror_scene.objects.push_back(
-        std::make_shared<Triangle>(Point3(-20, 0, -20), Point3(20, 0, -20), Point3(0, 0, 20),
-                                   std::make_shared<MirrorShader>(Color(0.85, 0.85, 0.85), mirror_scene.light)));
-    mirror_scene.objects.push_back(std::make_shared<Sphere>(Point3(-0.6, 1.2, -0.5), 0.55, matte));
-    mirror_scene.objects.push_back(std::make_shared<Sphere>(Point3(0.9, 0.6, 0.3), 0.4, shiny));
-
-    PerspectiveCamera mirror_cam;
-    mirror_cam.lookfrom = Point3(0, 2.0, 3.5);
-    mirror_cam.lookat = Point3(0, 0.6, -0.5);
-    mirror_cam.render(mirror_scene, "mirror.png");
-
-    Scene phong_scene;
-    phong_scene.light = scene.light;
-    phong_scene.objects.push_back(
-        std::make_shared<Sphere>(Point3(0, 0, -1), 0.6, std::make_shared<BlinnPhongShader>(Color(0.95, 0.95, 0.15), Color(1, 1, 1), 64.0f, 0.8f, scene.light)));
-    cam.render(phong_scene, "blinn_phong.png");
+    int rpp = 1;
+    const bool rpp_set = args.isSet("rpp", rpp);
+    if (rpp_set && rpp < 1) {
+        std::cerr << "Rays per pixel must be at least 1.\n";
+        return 1;
+    }
 
     Scene snowman_scene;
-    snowman_scene.light = scene.light;
+    snowman_scene.light.set_position(Point3(0, 10, 5));
 
     auto snow = std::make_shared<BlinnPhongShader>(
         Color(0.95, 0.95, 0.95), Color(1, 1, 1), 64.0f, 0.5f, snowman_scene.light);
@@ -179,38 +169,11 @@ int main() {
     PerspectiveCamera snowman_cam;
     snowman_cam.lookfrom = Point3(0, 0.8, 1);
     snowman_cam.lookat = Point3(0, 0.65, -1);
+    snowman_cam.image_width = image_width;
+    snowman_cam.aspect_ratio = aspect_ratio;
+    if (rpp_set)
+        snowman_cam.samples_per_pixel = rpp;
     snowman_cam.render(snowman_scene, "snowman.png");
 
-    PerspectiveCamera rubiks_cam;
-    // View the top, front, and right faces.
-    rubiks_cam.lookfrom = Point3(3, 5, 3);
-    rubiks_cam.lookat = Point3(0, 1.5, 0);
-
-    Scene rubiks_scene;
-    // This light serves the base and hidden faces; visible tiles have highlight lights.
-    rubiks_scene.light.set_position(rubiks_cam.lookfrom + Vec3(0, 1, 0));
-
-    auto black = std::make_shared<LambertianShader>(
-        Color(0.03, 0.03, 0.03), rubiks_scene.light);
-
-    auto grey = std::make_shared<LambertianShader>(
-        Color(0.25, 0.25, 0.25), rubiks_scene.light);
-
-    add_rubiks_cube(rubiks_scene, black);
-    rubiks_scene.objects.push_back(std::make_shared<Triangle>(Point3(1000, 0, -1000), Point3(-1000, 0, -1000), Point3(0, 0, 1000), grey));
-
-    rubiks_cam.render(rubiks_scene, "rubiks.png");
-
-//     OrthographicCamera rubiks_orth_cam;
-// //     rubiks_cam.lookfrom = Point3(1, 2, 5);
-//     rubiks_orth_cam.lookfrom = Point3(1, 2, 5);
-//     rubiks_orth_cam.lookat = Point3(0, 1, 4);
-//     rubiks_orth_cam.render(rubiks_scene, "rubiks_orth.png");
-
-    render_test_scene();
-
+    render_test_scene(image_width, aspect_ratio, rpp_set ? rpp : 100);
 }
-
-
-// TODO: Make a rubiks cube, base black with colored 3x3 tiles. 
-// Note: it would also be cool that the cube was the scramble for the current world record solve.
