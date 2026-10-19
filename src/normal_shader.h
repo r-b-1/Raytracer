@@ -8,7 +8,7 @@ class NormalShader : public Shader {
 public:
     explicit NormalShader(const PointLight& light = PointLight()) : Shader(light) {}
 
-    color rayColor(const HitStruct& h) const override;
+    Color rayColor(const HitStruct& h, const Scene& scene, int depth) const override;
 };
 
 #endif

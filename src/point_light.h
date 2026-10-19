@@ -4,17 +4,24 @@
 #include "color.h"
 #include "vec3.h"
 
-// White point light.
+// Point light: a position plus how brightly it radiates in each channel.
 class PointLight {
 public:
     PointLight() = default;
-    explicit PointLight(const point3& position) : position_(position) {}
+    explicit PointLight(const Point3& position) : position_(position) {}
+    PointLight(const Point3& position, const Color& intensity)
+        : position_(position), intensity_(intensity) {}
 
-    const point3& position() const { return position_; }
-    void set_position(const point3& position) { position_ = position; }
+    const Point3& position() const { return position_; }
+    void set_position(const Point3& position) { position_ = position; }
+
+    // Radiance multiplier; white by default.
+    const Color& intensity() const { return intensity_; }
+    void set_intensity(const Color& intensity) { intensity_ = intensity; }
 
 private:
-    point3 position_ = point3(0, 10, 5);
+    Point3 position_ = Point3(0, 10, 5);
+    Color intensity_ = Color(1, 1, 1);
 };
 
 #endif

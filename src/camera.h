@@ -1,55 +1,72 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "hittable.h"
+#include <atomic>
+#include <iostream>
+
+#include "color.h"
 #include "framebuffer.h"
 
 #include "scene.h"
 
-class camera {
+class Camera {
 public:
     float aspect_ratio = 1;
-    int image_width = 500;
-    int image_height = 500;
-    point3 lookfrom = point3(0, 0, 0);
-    point3 lookat = point3(0, 0, 0);
-    vec3 vup = vec3(0, 1, 0);
+    int image_width = 1000;
+    int image_height = 1000;
+    Point3 lookfrom = Point3(0, 0, 0);
+    Point3 lookat = Point3(0, 0, 0);
+    Vec3 vup = Vec3(0, 1, 0);
     int samples_per_pixel = 10;
+    int max_depth = 50; // Maximum reflection bounces per ray.
+
+
+    float focal_length = 1.0;
+    float image_plane_height = 2.0;
+
+    // Rows between progress updates. Too small and the terminal is flooded;
+    // too large and the bar stalls between frames.
+    int progress_interval = 10;
 
     void render(const Scene& scene, const std::string& filename = "image.png") {
         initialize();
+
+        // The render loop is parallel, so completion is counted rather than
+        // reported per iteration; each thread bumps the same counter.
+        std::atomic<int> rows_done{0};
+        const int total_rows = image_height;
+
+        std::clog << "\rRendering rows: 0/" << total_rows << " (0%)  " << std::flush;
+
         #pragma omp parallel for
         for (int j = 0; j < image_height; j++) {
             for (int i = 0; i < image_width; i++) {
-                color pixel_color(0, 0, 0);
+                Color pixel_color(0, 0, 0);
                 for (int s = 0; s < samples_per_pixel; s++) {
-                    pixel_color += ray_color(get_ray(i, j), scene);
+                    pixel_color += trace(scene, get_ray(i, j), max_depth);
                 }
                 pixel_color *= pixel_samples_scale;
                 framebuffer.setPixel(i, j, pixel_color);
             }
+
+            const int done = rows_done.fetch_add(1) + 1;
+            if (done % progress_interval == 0 || done == total_rows) {
+
+                #pragma omp critical
+                {
+                    const int percent = (100 * done) / total_rows;
+                    std::clog << "\rRendering rows: " << done << '/' << total_rows
+                              << " (" << percent << "%)  " << std::flush;
+                }
+            }
         }
+        std::clog << '\n';
+
         framebuffer.exportAsPNG(filename);
     }
 
 private:
     float pixel_samples_scale;
-    color ray_color(const ray& r, const Scene& scene) const {
-        double tmax = std::numeric_limits<double>::infinity();
-        HitStruct rec;
-        if (scene.intersect(r, k_tmin, tmax, rec)) {
-            if (rec.shader())
-                return rec.shader()->rayColor(rec);
-            return 0.5f * (rec.normal() + color(1, 1, 1));
-        }
-        vec3 unit_direction = unit_vector(r.direction());
-        auto a = 0.5 * (unit_direction.y() + 1.0);
-        return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
-    }
-
-    // Ignore intersections at the ray origin to avoid self-intersections.
-    static constexpr double k_tmin = 0.001;
-
     Framebuffer framebuffer;
 
     void initialize() {
@@ -60,13 +77,12 @@ private:
         camera_center = lookfrom;
 
         w = unit_vector(lookfrom - lookat);  // Camera backward
-        vec3 u = unit_vector(cross(vup, w)); // Camera right
-        vec3 v = cross(w, u);               // Camera up
+        Vec3 u = unit_vector(cross(vup, w)); // Camera right
+        Vec3 v = cross(w, u);               // Camera up
 
         pixel_samples_scale = 1.0f / static_cast<float>(samples_per_pixel);
-        auto focal_length = 1.0;
-        auto viewport_height = 2.0;
-        auto viewport_width = viewport_height * (double(image_width) / image_height);
+        auto viewport_height = float(image_plane_height);
+        auto viewport_width = viewport_height * (float(image_width) / image_height);
 
         auto viewport_u = viewport_width * u;
         // PNG rows run from top to bottom.
@@ -84,7 +100,7 @@ private:
             viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
     }
 
-    ray get_ray(int i, int j) const {
+    Ray get_ray(int i, int j) const {
         // Construct a camera ray originating from the origin and directed at randomly sampled
         // point around the pixel location i, j.
 
@@ -96,19 +112,19 @@ private:
         return make_ray(pixel_sample);
     }
 
-    vec3 sample_square() const {
+    Vec3 sample_square() const {
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
-        return vec3(random_double() - 0.5, random_double() - 0.5, 0);
+        return Vec3(random_float() - 0.5, random_float() - 0.5, 0);
     }    
 
 protected:
-    point3 camera_center;
-    vec3 w;
+    Point3 camera_center;
+    Vec3 w;
 
-    point3 pixel00_loc;
-    vec3 pixel_delta_u, pixel_delta_v;
+    Point3 pixel00_loc;
+    Vec3 pixel_delta_u, pixel_delta_v;
 
-    virtual ray make_ray(const point3& pixel_position) const = 0;
+    virtual Ray make_ray(const Point3& pixel_position) const = 0;
 };
 
 #endif

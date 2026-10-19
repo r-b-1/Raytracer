@@ -3,19 +3,22 @@
 
 #include "shader.h"
 
-// Diffuse shading.
+// Diffuse shading, summed over every light on the material.
 class LambertianShader : public Shader {
 public:
-    explicit LambertianShader(const color& baseColor = color(0.8, 0.8, 0.8),
+    explicit LambertianShader(const Color& baseColor = Color(0.8, 0.8, 0.8),
                               const PointLight& light = PointLight())
         : Shader(light), baseColor_(baseColor) {}
 
-    color rayColor(const HitStruct& h) const override;
+    LambertianShader(const Color& baseColor, const std::vector<PointLight>& lights)
+        : Shader(lights), baseColor_(baseColor) {}
 
-    const color& baseColor() const { return baseColor_; }
+    Color rayColor(const HitStruct& h, const Scene& scene, int depth) const override;
+
+    const Color& baseColor() const { return baseColor_; }
 
 private:
-    color baseColor_;
+    Color baseColor_;
 };
 
 #endif
