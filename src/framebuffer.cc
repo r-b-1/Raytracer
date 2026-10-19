@@ -16,9 +16,7 @@ void Framebuffer::setPixel(int i, int j, const Vec3& c) {
 }
 
 void Framebuffer::exportAsPNG(std::string filename) {
-    // Every ray is already traced by the time this runs: this loop only
-    // encodes pixels into the PNG, so it must not be mistaken for render
-    // progress.
+    
     png::image<png::rgb_pixel> imData(width, height);
     for (size_t y = 0; y < imData.get_height(); y++) {
         const size_t remaining = imData.get_height() - y;

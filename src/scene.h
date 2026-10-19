@@ -31,13 +31,10 @@ public:
     }
 };
 
-// Trace one ray and return the color seen along it: the shading of the first
-// surface it hits, or the sky if it escapes. `depth` is the remaining
-// reflection budget, so recursive bounces terminate. Shared by the camera and
-// by materials that trace secondary rays, so both resolve hits the same way.
+
 inline Color trace(const Scene& scene, const Ray& r, int depth) {
     if (depth <= 0)
-        return Color(0, 0, 0); // Out of bounces; absorbing rather than recursing.
+        return Color(0, 0, 0); // Out of bounces, absorbing rather than recursing.
 
     float tmax = std::numeric_limits<float>::infinity();
     HitStruct rec;
@@ -51,7 +48,7 @@ inline Color trace(const Scene& scene, const Ray& r, int depth) {
     return sky_color(r.direction());
 }
 
-// True when something blocks the line from `p` to `light_pos`.
+// True when something blocks the line from p to light_pos.
 inline bool occluded(const Scene& scene, const Point3& p, const Vec3& normal,
                      const Point3& light_pos) {
     const Vec3 to_light = light_pos - p;
@@ -65,7 +62,7 @@ inline bool occluded(const Scene& scene, const Point3& p, const Vec3& normal,
     // direction must be normalized before tmax can be a distance. Left
     // unnormalized, tmax would be squared by |direction| and the ray would
     // reach far past the light.
-    float tmax = to_light.length(); // A hit *beyond* the light does not block.
+    float tmax = to_light.length(); 
     HitStruct rec;
     return scene.intersect(Ray(origin, unit_vector(to_light)), k_min_hit_t, tmax, rec);
 }

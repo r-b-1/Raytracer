@@ -10,8 +10,8 @@ public:
                           const PointLight& light = PointLight())
         : Shader(light), baseColor_(baseColor) {}
 
-    // A mirror reflects rather than shades, so the lights are carried only so
-    // the material can be constructed like every other one.
+ 
+        
     MirrorShader(const Color& baseColor, const std::vector<PointLight>& lights)
         : Shader(lights), baseColor_(baseColor) {}
 

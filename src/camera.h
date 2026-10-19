@@ -20,9 +20,7 @@ public:
     int samples_per_pixel = 10;
     int max_depth = 50; // Maximum reflection bounces per ray.
 
-    // Projection: the image plane sits `focal_length` in front of the eye and
-    // spans `image_plane_height` there, so a half-height of image_plane_height
-    // / 2 subtends atan(image_plane_height / 2 / focal_length).
+
     float focal_length = 1.0;
     float image_plane_height = 2.0;
 
@@ -53,8 +51,7 @@ public:
 
             const int done = rows_done.fetch_add(1) + 1;
             if (done % progress_interval == 0 || done == total_rows) {
-                // Writes are flushed without a newline so the bar overwrites in
-                // place; the newline below ends it once encoding is done.
+
                 #pragma omp critical
                 {
                     const int percent = (100 * done) / total_rows;

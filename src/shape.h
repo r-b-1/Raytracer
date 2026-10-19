@@ -55,7 +55,7 @@ public:
     const std::shared_ptr<Shader>& shader() const { return shader_; }
     void set_shader(std::shared_ptr<Shader> shader) { shader_ = std::move(shader); }
 
-    // Fill hit on success; leave it untouched on a miss. Scene updates tmax.
+
     virtual bool intersect(
         const Ray& r,
         float tmin,
