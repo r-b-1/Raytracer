@@ -10,7 +10,7 @@ public:
                               const PointLight& light = PointLight())
         : Shader(light), baseColor_(baseColor) {}
 
-    LambertianShader(const Color& baseColor, const std::vector<PointLight>& lights)
+    LambertianShader(const Color& baseColor, const std::vector<std::shared_ptr<Light>>& lights)
         : Shader(lights), baseColor_(baseColor) {}
 
     Color rayColor(const HitStruct& h, const Scene& scene, int depth) const override;

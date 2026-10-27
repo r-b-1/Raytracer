@@ -2,21 +2,22 @@
 #define POINT_LIGHT_H
 
 #include "color.h"
+#include "light.h"
 #include "vec3.h"
 
 // Point light: a position plus how brightly it radiates in each channel.
-class PointLight {
+class PointLight : public Light {
 public:
     PointLight() = default;
     explicit PointLight(const Point3& position) : position_(position) {}
     PointLight(const Point3& position, const Color& intensity)
         : position_(position), intensity_(intensity) {}
 
-    const Point3& position() const { return position_; }
+    const Point3& position() const override { return position_; }
     void set_position(const Point3& position) { position_ = position; }
 
     // Radiance multiplier; white by default.
-    const Color& intensity() const { return intensity_; }
+    const Color& intensity() const override { return intensity_; }
     void set_intensity(const Color& intensity) { intensity_ = intensity; }
 
 private:
