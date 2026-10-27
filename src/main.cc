@@ -12,6 +12,7 @@
 #include "triangle.h"
 #include "mirror_shader.h"
 #include "rubiks_cube.h"
+#include "aabb.h"
 
 
 void render_test_scene(int image_width, float aspect_ratio, int samples) {
@@ -66,6 +67,8 @@ void render_test_scene(int image_width, float aspect_ratio, int samples) {
     // Behind the camera: only ever seen in the mirrors.
     scene.objects.push_back(std::make_shared<Sphere>(Point3(0.3, 1, 5), 1, orange));
     scene.objects.push_back(std::make_shared<Sphere>(Point3(2.4, 0.8, 4.8), 0.8, purple));
+
+    build_bvh(scene.objects(); // makes the bounding box heirarchy for the obj. in the scene
 
     PerspectiveCamera pcam;
     pcam.lookfrom = Point3(0, 3, 3);
@@ -167,6 +170,8 @@ int main(int argc, char* argv[]) {
     snowman_scene.objects.push_back(
         std::make_shared<Sphere>(Point3(0, 100.5, -200), 100, sun));
 
+    build_bvh(snowman_scene.objects); // does bvh for the objects in the snowman scene
+
     PerspectiveCamera snowman_cam;
     snowman_cam.lookfrom = Point3(0, 0.8, 1);
     snowman_cam.lookat = Point3(0, 0.65, -1);
@@ -216,6 +221,8 @@ int main(int argc, char* argv[]) {
         wall, wall + wall_u, wall + wall_u + wall_v, back_mirror));
     rubiks_scene.objects.push_back(std::make_shared<Triangle>(
         wall, wall + wall_u + wall_v, wall + wall_v, back_mirror));
+
+    build_bvh(rubiks_scene.objects); // does bvh for the cube
 
     rubiks_cam.render(rubiks_scene, "rubiks.png");
 
