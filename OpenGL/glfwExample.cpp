@@ -10,7 +10,7 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtc/type_ptr.hpp"
 
-#include "GLSL.h"
+#include "GLSL.h" // Open Graphics Library
 
 int CheckGLErrors(const char *s)
 {
@@ -18,7 +18,7 @@ int CheckGLErrors(const char *s)
     return errCount;
 }
 
-int main(void)
+int main(void) // Host = CPU, Device = GPU
 {
     /* Initialize the library */
     if (!glfwInit()) {
