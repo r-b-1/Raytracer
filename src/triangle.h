@@ -18,7 +18,22 @@ public:
           n(cross(v1 - v0, v2 - v0)) {
         degenerate = n.length_squared() == 0;
         n = degenerate ? Vec3(0, 0, 0) : unit_vector(n);
+
+
+	const Point3 v1_point = v0 - va_minus_vb;
+	const Point3 v2_point = v0 - va_minus_vc;
+	bbox = aabb(
+            Point3(std::fmin(v0.x(), std::fmin(v1_point.x(), v2_point.x())),
+                   std::fmin(v0.y(), std::fmin(v1_point.y(), v2_point.y())),
+                   std::fmin(v0.z(), std::fmin(v1_point.z(), v2_point.z()))),
+            Point3(std::fmax(v0.x(), std::fmax(v1_point.x(), v2_point.x())),
+                   std::fmax(v0.y(), std::fmax(v1_point.y(), v2_point.y())),
+                   std::fmax(v0.z(), std::fmax(v1_point.z(), v2_point.z()))))
+            .pad_to_minimums();
+			
     }
+
+    aabb bounding_box() const override { return bbox };
 
     bool intersect(const Ray& r, float tmin, float& tmax, HitStruct& hit) const override {
         if (degenerate) return false;
@@ -65,6 +80,7 @@ private:
     Vec3 va_minus_vb, va_minus_vc;
     Vec3 n;          // unit geometric normal
     bool degenerate; // vertices collinear (or coincident)
+    aabb bbox;
 };
 
 #endif

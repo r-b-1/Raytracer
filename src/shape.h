@@ -7,6 +7,7 @@
 #include "ray.h"
 #include "normal_shader.h"
 #include "shader.h"
+#include "aabb.h"
 
 // Ignore hits this close to the ray origin so a surface cannot intersect the
 // ray that spawned it. Every trace (camera and reflection alike) starts here.
@@ -51,6 +52,9 @@ public:
         : shader_(std::move(shader)) {}
 
     virtual ~Shape() = default;
+
+    virtual aabb bounding_box() cosnt = 0;
+
 
     const std::shared_ptr<Shader>& shader() const { return shader_; }
     void set_shader(std::shared_ptr<Shader> shader) { shader_ = std::move(shader); }
