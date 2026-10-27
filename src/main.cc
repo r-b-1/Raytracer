@@ -1,3 +1,4 @@
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -13,6 +14,51 @@
 #include "mirror_shader.h"
 #include "rubiks_cube.h"
 #include "aabb.h"
+#include "bvh.h"
+
+
+bool render_triangle_file(int image_width, float aspect_ratio, int samples) {
+    std::ifstream file("triangle_test/trilist.dat");
+    if (!file) {
+        std::cerr << "Failed to open triangle_test/trilist.dat; run from the project root.\n";
+        return false;
+    }
+
+    std::vector<float> vertices;
+    float value;
+    while (file >> value) {
+        vertices.push_back(value);
+        file >> std::ws;
+        if (file.peek() == ',') file.get();
+    }
+    if (!file.eof() || vertices.empty() || vertices.size() % 9 != 0) {
+        std::cerr << "Invalid triangle data: expected 9 floats per triangle.\n";
+        return false;
+    }
+
+    Scene scene;
+    scene.objects.reserve(vertices.size() / 9);
+    auto material = std::make_shared<NormalShader>();
+    for (std::size_t i = 0; i < vertices.size(); i += 9) {
+        scene.objects.push_back(std::make_shared<Triangle>(
+            Point3(vertices[i], vertices[i + 1], vertices[i + 2]),
+            Point3(vertices[i + 3], vertices[i + 4], vertices[i + 5]),
+            Point3(vertices[i + 6], vertices[i + 7], vertices[i + 8]),
+            material));
+    }
+    build_bvh(scene.objects);
+
+    PerspectiveCamera camera;
+    camera.lookfrom = Point3(0, 0, 3);
+    camera.lookat = Point3(0, 0, 0);
+    camera.image_plane_height = 1.2f;
+    camera.image_width = image_width;
+    camera.aspect_ratio = aspect_ratio;
+    camera.samples_per_pixel = samples;
+    camera.max_depth = 1;
+    camera.render(scene, "triangle_mesh.png");
+    return true;
+}
 
 
 void render_test_scene(int image_width, float aspect_ratio, int samples) {
@@ -68,7 +114,7 @@ void render_test_scene(int image_width, float aspect_ratio, int samples) {
     scene.objects.push_back(std::make_shared<Sphere>(Point3(0.3, 1, 5), 1, orange));
     scene.objects.push_back(std::make_shared<Sphere>(Point3(2.4, 0.8, 4.8), 0.8, purple));
 
-    build_bvh(scene.objects(); // makes the bounding box heirarchy for the obj. in the scene
+    build_bvh(scene.objects); // makes the bounding box heirarchy for the obj. in the scene
 
     PerspectiveCamera pcam;
     pcam.lookfrom = Point3(0, 3, 3);
