@@ -19,6 +19,7 @@ include(Catch)
 # 
 set(UTESTS 
   utest_Success
+  utest_SceneLoader
   utest_Failure)
 
 # 
@@ -36,4 +37,6 @@ foreach(uexec ${UTESTS})
   # add_test(NAME ${uexec} COMMAND $<TARGET_FILE:${uexec}>)
   catch_discover_tests(${uexec})
 endforeach(uexec)
+
+target_compile_definitions(utest_SceneLoader PRIVATE SCENE_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 

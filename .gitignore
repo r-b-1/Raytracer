@@ -16,6 +16,7 @@ cmake-build-debug/
 *.lo
 *.o
 *.obj
+!utests/fixtures/*.obj
 
 # Precompiled Headers
 *.gch

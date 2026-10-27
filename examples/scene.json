@@ -1,0 +1,29 @@
+{
+  "scene": {
+    "sceneParameters": {"bgColor": [0.12, 0.16, 0.24]},
+    "camera": [
+      {"name": "front", "type": "perspective", "position": [0, 1.5, 5],
+       "lookatPoint": [0, 0.5, 0], "focalLength": 1, "imagePlaneWidth": 1.2}
+    ],
+    "light": [
+      {"type": "point", "position": [-3, 5, 4], "intensity": [0.8, 0.7, 0.6]},
+      {"type": "point", "position": [4, 3, 2], "intensity": [0.2, 0.3, 0.5]}
+    ],
+    "shader": [
+      {"name": "red", "type": "BlinnPhong", "diffuse": [0.8, 0.1, 0.1],
+       "specular": [1, 1, 1], "phongExp": 64},
+      {"name": "floor", "type": "Lambertian", "diffuse": [0.5, 0.5, 0.5]},
+      {"name": "mirror", "type": "Mirror"}
+    ],
+    "shape": [
+      {"type": "sphere", "center": [-0.8, 0.75, 0], "radius": 0.75,
+       "shader": {"ref": "red"}},
+      {"type": "sphere", "center": [0.9, 0.6, 0], "radius": 0.6,
+       "shader": {"ref": "mirror"}},
+      {"type": "triangle", "v0": [-10, 0, 10], "v1": [10, 0, 10],
+       "v2": [10, 0, -10], "shader": {"ref": "floor"}},
+      {"type": "triangle", "v0": [-10, 0, 10], "v1": [10, 0, -10],
+       "v2": [-10, 0, -10], "shader": {"ref": "floor"}}
+    ]
+  }
+}

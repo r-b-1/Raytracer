@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <optional>
 
 #include "color.h"
 #include "framebuffer.h"
@@ -11,6 +12,8 @@
 
 class Camera {
 public:
+    virtual ~Camera() = default;
+
     float aspect_ratio = 1;
     int image_width = 1000;
     int image_height = 1000;
@@ -23,6 +26,8 @@ public:
 
     float focal_length = 1.0;
     float image_plane_height = 2.0;
+    // Scene files specify width; derive height using the final output aspect.
+    std::optional<float> image_plane_width;
 
     // Rows between progress updates. Too small and the terminal is flooded;
     // too large and the bar stalls between frames.
@@ -81,8 +86,9 @@ private:
         Vec3 v = cross(w, u);               // Camera up
 
         pixel_samples_scale = 1.0f / static_cast<float>(samples_per_pixel);
-        auto viewport_height = float(image_plane_height);
-        auto viewport_width = viewport_height * (float(image_width) / image_height);
+        const float output_aspect = float(image_width) / image_height;
+        auto viewport_width = image_plane_width.value_or(image_plane_height * output_aspect);
+        auto viewport_height = viewport_width / output_aspect;
 
         auto viewport_u = viewport_width * u;
         // PNG rows run from top to bottom.

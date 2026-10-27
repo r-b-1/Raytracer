@@ -3,15 +3,22 @@
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "point_light.h"
 #include "shape.h"
 
+class Camera;
+
 class Scene {
 public:
     std::vector<std::shared_ptr<Shape>> objects;
+    std::vector<std::shared_ptr<Camera>> cameras;
+    std::vector<PointLight> lights;
+    std::optional<Color> background_color;
 
+    // Single-light convenience used by the scenes built in main.cc.
     PointLight light;
 
     bool intersect(const Ray& r, float tmin, float& tmax, HitStruct& hit) const {
@@ -49,6 +56,8 @@ inline Color trace(const Scene& scene, const Ray& r, int depth) {
         return 0.5f * (rec.normal() + Color(1, 1, 1)); // Fallback for an unshaded hit.
     }
 
+    if (scene.background_color)
+        return *scene.background_color;
     return sky_color(r.direction());
 }
 

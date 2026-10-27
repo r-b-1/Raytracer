@@ -1,0 +1,4 @@
+{
+  "shader": [{"name": "matte", "type": "Lambertian", "diffuse": [1, 0, 0]}],
+  "shape": [{"type": "mesh", "file": "triangle.obj", "shader": {"ref": "matte"}}]
+}

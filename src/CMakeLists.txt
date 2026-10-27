@@ -2,6 +2,8 @@ add_library (cs4212-util
   ArgumentParsing.cpp ArgumentParsing.h
   handleGraphicsArgs.cpp handleGraphicsArgs.h
   model_obj.cpp model_obj.h
+  ISceneLoader.h SceneLoader.h
+  SceneParser_JSON.cpp SceneParser_JSON.h
   camera.h
   perspective_camera.h
   orthographic_camera.h
@@ -33,6 +35,8 @@ add_library (cs4212-util
 target_compile_definitions(cs4212-util PUBLIC HAS_GLM)
 target_link_libraries(cs4212-util PRIVATE Boost::program_options)
 target_link_libraries(cs4212-util PUBLIC glm::glm)
+find_package(nlohmann_json CONFIG REQUIRED)
+target_link_libraries(cs4212-util PUBLIC nlohmann_json::nlohmann_json)
 
 # camera.h carries a `#pragma omp parallel for`, so every translation unit that
 # includes it needs both the OpenMP compile flag and the runtime.

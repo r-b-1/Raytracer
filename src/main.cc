@@ -1,4 +1,5 @@
 #include <fstream>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -15,6 +16,8 @@
 #include "rubiks_cube.h"
 #include "aabb.h"
 #include "bvh.h"
+#include "SceneLoader.h"
+#include "SceneParser_JSON.h"
 
 
 bool render_triangle_file(int image_width, float aspect_ratio, int samples) {
@@ -179,6 +182,43 @@ int main(int argc, char* argv[]) {
     if (rpp_set && rpp < 1) {
         std::cerr << "Rays per pixel must be at least 1.\n";
         return 1;
+    }
+
+    std::string input_file;
+    if (args.isSet("inputfile", input_file)) {
+        try {
+            Scene scene;
+            auto loader = std::make_shared<SceneLoader>(scene);
+            SceneParser_JSON(loader).parseFileData(input_file);
+            if (scene.cameras.empty())
+                throw std::runtime_error("Scene file must contain at least one camera");
+            build_bvh(scene.objects);
+
+            std::string output_file = "image.png";
+            args.isSet("outputfile", output_file);
+            int max_depth = 50;
+            if (args.isSet("recursionDepth", max_depth) && max_depth < 1)
+                throw std::runtime_error("Recursion depth must be at least 1");
+
+            for (std::size_t i = 0; i < scene.cameras.size(); ++i) {
+                auto &camera = *scene.cameras[i];
+                camera.image_width = image_width;
+                camera.aspect_ratio = aspect_ratio;
+                camera.max_depth = max_depth;
+                if (rpp_set)
+                    camera.samples_per_pixel = rpp;
+                std::filesystem::path output(output_file);
+                if (scene.cameras.size() > 1) {
+                    output = output.parent_path() / (output.stem().string() + "_" +
+                        std::to_string(i + 1) + output.extension().string());
+                }
+                camera.render(scene, output.string());
+            }
+            return 0;
+        } catch (const std::exception &e) {
+            std::cerr << "Failed to render scene: " << e.what() << '\n';
+            return 1;
+        }
     }
 
     Scene snowman_scene;

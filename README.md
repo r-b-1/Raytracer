@@ -29,8 +29,16 @@ With no size flags the images are 1000×1000. Passing only `--width` or only `--
 
 Running the program renders three scenes. The test scene uses every shader and is drawn with both the orthographic and the perspective camera. The snowman is an original scene. The Rubik's cube has colored mirror tiles. The three faces turned toward the camera are the ones that are lit, and a mirror stands behind the cube.
 
+To render a JSON scene:
+
+```
+./buildVCPkg/main --inputfile examples/scene.json --outputfile image.png --width 640 --height 360 --rpp 10
+```
+
+
 ## Tests
 
 ```
 ./buildVCPkg/utests/utest_Success
+./buildVCPkg/utests/utest_SceneLoader
 ```
