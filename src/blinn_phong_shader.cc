@@ -13,7 +13,7 @@ Color BlinnPhongShader::rayColor(const HitStruct& h, const Scene& scene, int) co
     Vec3 viewDir = unit_vector(-h.ray_direction());
 
     for (const auto& light : lights()) {
-        Vec3 lightDir = unit_vector(light.position() - h.p());
+        Vec3 lightDir = unit_vector(light->position() - h.p());
 
         // Suppress the highlight on the unlit side.
         float nDotl = dot(h.normal(), lightDir);
@@ -21,7 +21,7 @@ Color BlinnPhongShader::rayColor(const HitStruct& h, const Scene& scene, int) co
             continue;
 
         // Reject on the cheap dot product before paying for a shadow ray.
-        if (occluded(scene, h.p(), h.normal(), light.position()))
+        if (occluded(scene, h.p(), h.normal(), light->position()))
             continue;
 
         Vec3 halfVector = unit_vector(lightDir + viewDir);
@@ -29,7 +29,7 @@ Color BlinnPhongShader::rayColor(const HitStruct& h, const Scene& scene, int) co
         float nDoth = std::max(0.0f, dot(h.normal(), halfVector));
         float highlight = std::pow(nDoth, shininess_) * specular_strength_;
 
-        out += light.intensity() * (baseColor_ * nDotl + specular_ * highlight);
+        out += light->intensity() * (baseColor_ * nDotl + specular_ * highlight);
     }
 
     return out;

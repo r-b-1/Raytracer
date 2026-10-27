@@ -134,9 +134,9 @@ add_subdirectory(examples)
 # This builds a simple OpenGL example that you can use to get started with OpenGL.
 #
 add_subdirectory(OpenGL)
-add_executable(OpenGL
-  OpenGL/glfwExample.cpp
-)
+# add_executable(OpenGL
+#   OpenGL/glfwExample.cpp
+# )
 # add_subdirectory(Vulkan)
 
 #

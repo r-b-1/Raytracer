@@ -21,7 +21,7 @@ int CheckGLErrors(const char *s)
 int main(void) // Host = CPU, Device = GPU
 {
     /* Initialize the library */
-    if (!glfwInit()) {
+    if (!glfwInit()) { // Initializing the GLFW system
         exit (-1);
     }
     // throw std::runtime_error("Error! initialization of glfw failed!");
@@ -36,9 +36,9 @@ int main(void) // Host = CPU, Device = GPU
     float aspectRatio = 1.0; // 16.0 / 9.0; // winWidth / (float)winHeight;
     int winHeight = winWidth / aspectRatio;
     
-    GLFWwindow* window = glfwCreateWindow(winWidth, winHeight, "GLFW Example", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(winWidth, winHeight, "GLFW Example", NULL, NULL); // This says make me a window that works in OpenGL
     if (!window) {
-        std::cerr << "GLFW did not create a window!" << std::endl;
+        std::cerr << "GLFW did not create a window!" << std::endl; // If no window shows up, end the program.
         
         glfwTerminate();
         return -1;
@@ -97,7 +97,7 @@ int main(void) // Host = CPU, Device = GPU
         // Swap the front and back buffers
         glfwSwapBuffers(window);
 
-        /* Poll for and process events */
+        /* Poll for and process events */ // Checks i someone is using keyboard or mouse to move or adjust the scene
         glfwPollEvents();
 
         if (glfwGetKey( window, GLFW_KEY_T ) == GLFW_PRESS) {

@@ -14,13 +14,15 @@
 #include "rubiks_cube.h"
 #include "aabb.h"
 
+#include "SceneParser_JSON.h"
+#include "SceneLoader.h"
 
 void render_test_scene(int image_width, float aspect_ratio, int samples) {
     Scene scene;
 
-    const std::vector<PointLight> lights{
-        PointLight(Point3(-5, 8, 5), Color(0.7, 0.6, 0.45)),
-        PointLight(Point3(6, 6, 2), Color(0.35, 0.45, 0.7)),
+    const std::vector<std::shared_ptr<Light>> lights{
+        std::make_shared<PointLight>(Point3(-5, 8, 5), Color(0.7, 0.6, 0.45)),
+        std::make_shared<PointLight>(Point3(6, 6, 2), Color(0.35, 0.45, 0.7)),
     };
 
     auto grey = std::make_shared<LambertianShader>(Color(0.6, 0.6, 0.6), lights);
@@ -105,6 +107,23 @@ int main(int argc, char* argv[]) {
         args.printUsage();
         return 1;
     }
+
+    // if (argc < 2) {
+    //     std::cerr << "Usage ./main scene.json\n";
+    //     return 1;
+    // }
+
+    // Scene scene;
+    // auto loader = std::make_shared<SceneLoader>(scene);
+    // SceneParser_JSON parser(loader);
+    // parser.parseFileData(argv[1]);
+    
+    // if (scene.cameras.empty()) {
+    //     std::cerr << "Scenes need to have atleast 1 camera.\n";
+    //     return 1;
+    // }
+
+    // scene.cameras.front()->render(scene, "image.png");
 
     // 1000x1000 unless the command line says otherwise. Passing only one
     // dimension keeps the image square, matching the cameras' default aspect.
