@@ -22,6 +22,10 @@ public:
         bool found = false;
 
         for (const auto& object : objects) {
+	    if (!object->bounding_box().hit(r, interval(tmin, tmax)) // Uses aabb to check if the bb is hit, if not there is no object hit
+		continue
+
+
             HitStruct candidate;
 
             if (object->intersect(r, tmin, tmax, candidate)) {
