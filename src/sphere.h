@@ -18,7 +18,7 @@ public:
 	bbox = aabb(this->center - rvec, this->center + rvec);
 	}
 
-    aabb bounding_box() const override { return bbox }
+    aabb bounding_box() const override { return bbox; }
 
     bool intersect(const Ray& r, float tmin, float& tmax, HitStruct& hit) const override {
         Vec3 oc = center - r.origin();

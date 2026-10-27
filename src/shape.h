@@ -53,7 +53,7 @@ public:
 
     virtual ~Shape() = default;
 
-    virtual aabb bounding_box() cosnt = 0;
+    virtual aabb bounding_box() const = 0;
 
 
     const std::shared_ptr<Shader>& shader() const { return shader_; }

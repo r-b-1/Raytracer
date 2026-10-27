@@ -12,7 +12,9 @@
 #include "triangle.h"
 #include "mirror_shader.h"
 #include "rubiks_cube.h"
+
 #include "aabb.h"
+#include "bvh.h"
 
 #include "SceneParser_JSON.h"
 #include "SceneLoader.h"
@@ -70,7 +72,7 @@ void render_test_scene(int image_width, float aspect_ratio, int samples) {
     scene.objects.push_back(std::make_shared<Sphere>(Point3(0.3, 1, 5), 1, orange));
     scene.objects.push_back(std::make_shared<Sphere>(Point3(2.4, 0.8, 4.8), 0.8, purple));
 
-    build_bvh(scene.objects(); // makes the bounding box heirarchy for the obj. in the scene
+    build_bvh(scene.objects); // makes the bounding box heirarchy for the obj. in the scene
 
     PerspectiveCamera pcam;
     pcam.lookfrom = Point3(0, 3, 3);
