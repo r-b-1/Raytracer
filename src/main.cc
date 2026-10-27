@@ -105,22 +105,22 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (argc < 2) {
-        std::cerr << "Usage ./main scene.json\n";
-        return 1;
-    }
+    // if (argc < 2) {
+    //     std::cerr << "Usage ./main scene.json\n";
+    //     return 1;
+    // }
 
-    Scene scene;
-    auto loader = std::make_shared<SceneLoader>(scene);
-    SceneParser_JSON parser(loader);
-    parser.parseFileData(argv[1]);
+    // Scene scene;
+    // auto loader = std::make_shared<SceneLoader>(scene);
+    // SceneParser_JSON parser(loader);
+    // parser.parseFileData(argv[1]);
     
-    if (scene.cameras.empty()) {
-        std::cerr << "Scenes need to have atleast 1 camera.\n";
-        return 1;
-    }
+    // if (scene.cameras.empty()) {
+    //     std::cerr << "Scenes need to have atleast 1 camera.\n";
+    //     return 1;
+    // }
 
-    scene.cameras.front()->render(scene, "image.png");
+    // scene.cameras.front()->render(scene, "image.png");
 
     // 1000x1000 unless the command line says otherwise. Passing only one
     // dimension keeps the image square, matching the cameras' default aspect.
