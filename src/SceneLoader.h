@@ -7,6 +7,12 @@
 #include "perspective_camera.h"
 #include "orthographic_camera.h"
 
+#include "lambertian_shader.h"
+#include "blinn_phong_shader.h"
+#include "mirror_shader.h"
+#include "sphere.h"
+#include "triangle.h"
+
 class SceneLoader : public ISceneLoader {
 private:
   Scene &m_targetScene; // Reference to the external scene
