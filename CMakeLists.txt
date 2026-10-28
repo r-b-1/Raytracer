@@ -134,9 +134,29 @@ add_subdirectory(examples)
 # This builds a simple OpenGL example that you can use to get started with OpenGL.
 #
 add_subdirectory(OpenGL)
-# add_executable(OpenGL
-#   OpenGL/glfwExample.cpp
-# )
+add_executable(OpenGL
+  OpenGL/glfwExample.cpp
+  OpenGL/GLSL.cpp
+  OpenGL/GLSL.h
+)
+# The build directory already has an OpenGL/ folder from add_subdirectory, so the
+# binary cannot be named OpenGL.
+set_target_properties(OpenGL PROPERTIES OUTPUT_NAME OpenGLExample)
+# Linking GLEW::GLEW also adds vcpkg's include directory, which is where GL/glew.h lives.
+target_link_libraries(OpenGL PRIVATE GLEW::GLEW)
+target_link_libraries(OpenGL PRIVATE glfw)
+if(APPLE)
+    target_link_libraries(OpenGL PRIVATE
+        "-framework OpenGL"
+        "-framework Cocoa"
+        "-framework IOKit"
+        "-framework CoreVideo"
+    )
+else()
+    target_link_libraries(OpenGL PRIVATE OpenGL::GL)
+endif()
+target_link_libraries(OpenGL PRIVATE PNG::PNG)
+target_link_libraries(OpenGL PRIVATE ZLIB::ZLIB)
 # add_subdirectory(Vulkan)
 
 #
