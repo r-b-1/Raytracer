@@ -110,6 +110,23 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    if (argc < 2) {
+        std::cerr << "Usage ./main scene.json\n";
+        return 1;
+    }
+
+    Scene scene;
+    auto loader = std::make_shared<SceneLoader>(scene);
+    SceneParser_JSON parser(loader);
+    parser.parseFileData(argv[1]);
+    
+    if (scene.cameras.empty()) {
+        std::cerr << "Scenes need to have atleast 1 camera.\n";
+        return 1;
+    }
+
+    scene.cameras.front()->render(scene, "image.png");
+
     // 1000x1000 unless the command line says otherwise. Passing only one
     // dimension keeps the image square, matching the cameras' default aspect.
     int image_width = 1000;
@@ -137,32 +154,6 @@ int main(int argc, char* argv[]) {
     if (rpp_set && rpp < 1) {
         std::cerr << "Rays per pixel must be at least 1.\n";
         return 1;
-    }
-
-    std::string scene_file;
-    if (args.isSet("inputfile", scene_file)) {
-        Scene scene;
-        auto loader = std::make_shared<SceneLoader>(scene);
-        SceneParser_JSON parser(loader);
-        parser.parseFileData(scene_file);
-
-        if (scene.cameras.empty()) {
-            std::cerr << "Scenes need to have at least 1 camera.\n";
-            return 1;
-        }
-
-        build_bvh(scene.objects);
-
-        std::string output_file = "image.png";
-        args.isSet("outputfile", output_file);
-
-        auto& cam = *scene.cameras.front();
-        cam.image_width = image_width;
-        cam.aspect_ratio = aspect_ratio;
-        if (rpp_set)
-            cam.samples_per_pixel = rpp;
-        cam.render(scene, output_file);
-        return 0;
     }
 
     Scene snowman_scene;
