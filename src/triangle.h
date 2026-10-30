@@ -33,7 +33,7 @@ public:
 			
     }
 
-    aabb bounding_box() const override { return bbox };
+    aabb bounding_box() const override { return bbox; };
 
     bool intersect(const Ray& r, float tmin, float& tmax, HitStruct& hit) const override {
         if (degenerate) return false;

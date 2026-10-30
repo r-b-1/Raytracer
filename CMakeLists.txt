@@ -132,11 +132,10 @@ add_subdirectory(examples)
 # OpenGL Example
 #
 # This builds a simple OpenGL example that you can use to get started with OpenGL.
-#
+# The "glfwExample" target is defined inside OpenGL/CMakeLists.txt (linked against
+# GLEW and glfw). Do not add_executable(the same sources here) - a second target
+# compiling them separately would build without GLEW and fail.
 add_subdirectory(OpenGL)
-add_executable(OpenGL
-  OpenGL/glfwExample.cpp
-)
 # add_subdirectory(Vulkan)
 
 #
