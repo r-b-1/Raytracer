@@ -73,11 +73,54 @@ int main(void) // Host = CPU, Device = GPU
     // The ortho parameters, in order: left, right, bottom, top, zNear, zFar
     float halfWidth = 15.0 / 2.0;
     float halfHeight = halfWidth / aspectRatio;
+
+    GLuint m_triangleVBO[1];
+    GLuint m_VAO;
+
     glm::mat4 projectionMatrix = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, -10.0f, 10.0f);
 
     GLint major_version;
     glGetIntegerv(GL_MAJOR_VERSION, &major_version);
     std::cout << "GL_MAJOR_VERSION: " << major_version << std::endl;
+
+    // create a Vertex Array Buffer to hold our triangle data                                               
+    glGenBuffers(1, m_triangleVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
+
+    // this is the actual triangle data that will be copied to                                              
+    // the GPU memory                                                                                       
+    std::vector< float > host_VertexBuffer{ -0.5f, -0.5f, 0.0f,    // V0                                    
+                                            0.5f, -0.5f, 0.0f,    // V1                                    
+                                            0.0f, 0.5f, 0.0f };   // V2                                    
+
+    int numBytes = host_VertexBuffer.size() * sizeof(float);
+
+    // copy the numBytes from host_VertexBuffer t the GPU and store in                                      
+    // the currently bound VBO                                                                              
+    glBufferData(GL_ARRAY_BUFFER, numBytes, host_VertexBuffer.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    // once copied, we no longer need the data on the host                                                  
+    host_VertexBuffer.clear();
+
+    // create a vertex array object that will map the attributes in                                         
+    // our vertex buffer to different location attributes for our                                           
+    // shaders                                                                                              
+    glGenVertexArrays(1, &m_VAO);
+    glBindVertexArray(m_VAO);
+
+    // VAO details here - we only have 1 attribute or location                                              
+    // (Position of the vertex)                                                                             
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+    glBindVertexArray(0);
+
+    // Create a shader using my GLSLObject class                                                            
+    sivelab::GLSLObject shader;
+    shader.addShader( "vertexShader_passthrough.glsl", sivelab::GLSLObject::VERTEX_SHADER );
+    shader.addShader( "fragmentShader_passthrough.glsl", sivelab::GLSLObject::FRAGMENT_SHADER );
+    shader.createProgram();
 
     double timeDiff = 0.0, startFrameTime = 0.0, endFrameTime = 0.0;
     
@@ -93,6 +136,12 @@ int main(void) // Host = CPU, Device = GPU
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /* Render your objects here */
+
+        shader.activate();
+        glBindVertexArray(m_VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(0);
+        shader.deactivate();
 
         // Swap the front and back buffers
         glfwSwapBuffers(window);

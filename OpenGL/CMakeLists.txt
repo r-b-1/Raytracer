@@ -22,3 +22,15 @@ endif()
 target_link_libraries (glfwExample PRIVATE PNG::PNG)
 target_link_libraries (glfwExample PRIVATE ZLIB::ZLIB)
 
+configure_file(
+    vertexShader_passthrough.glsl
+    ${CMAKE_BINARY_DIR}/vertexShader_passthrough.glsl
+    COPYONLY
+)
+
+configure_file(
+    fragmentShader_passthrough.glsl
+    ${CMAKE_BINARY_DIR}/fragmentShader_passthrough.glsl
+    COPYONLY
+)
+
