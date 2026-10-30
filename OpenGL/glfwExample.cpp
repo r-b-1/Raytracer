@@ -61,7 +61,7 @@ int main(void) // Host = CPU, Device = GPU
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    glClearColor(0.0, 0.7, 1.0, 1.0);
+    glClearColor(0.8, 0.3, 0.3, 1.0);
 
     int fb_width, fb_height;
     glfwGetFramebufferSize(window, &fb_width, &fb_height);
