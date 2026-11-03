@@ -34,3 +34,16 @@ configure_file(
     COPYONLY
 )
 
+# Also copy the shaders next to the executable (configure_file() can't use
+# generator expressions like $<TARGET_FILE_DIR:...>, so this runs post-build).
+# This lets OpenGL/glfwExample be run from anywhere, including the project root.
+add_custom_command(TARGET glfwExample POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/vertexShader_passthrough.glsl
+        $<TARGET_FILE_DIR:glfwExample>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/fragmentShader_passthrough.glsl
+        $<TARGET_FILE_DIR:glfwExample>
+    COMMENT "Copying GLSL shaders next to glfwExample"
+)
+

@@ -1,5 +1,7 @@
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include <GL/glew.h>
@@ -18,8 +20,20 @@ int CheckGLErrors(const char *s)
     return errCount;
 }
 
-int main(void) // Host = CPU, Device = GPU
+int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 {
+    // Resolve shader files relative to the current directory first, then the
+    // directory containing this executable, so the program can be launched
+    // from anywhere (e.g. "./buildVCPkg/OpenGL/glfwExample").
+    namespace fs = std::filesystem;
+    fs::path exeDir = (argc > 0) ? fs::absolute(argv[0]).parent_path() : fs::path();
+    auto resolveShaderPath = [&](const char* file) -> std::string {
+        if (fs::exists(file)) return std::string(file);              // cwd
+        fs::path nearExe = exeDir / file;
+        if (fs::exists(nearExe)) return nearExe.string();            // next to the binary
+        return std::string(file); // let GLSLObject produce its usual error
+    };
+
     /* Initialize the library */
     if (!glfwInit()) {
         exit (-1);
@@ -125,8 +139,8 @@ int main(void) // Host = CPU, Device = GPU
 
     // Create a shader using my GLSLObject class                                                            
     sivelab::GLSLObject shader;
-    shader.addShader( "vertexShader_passthrough.glsl", sivelab::GLSLObject::VERTEX_SHADER );
-    shader.addShader( "fragmentShader_passthrough.glsl", sivelab::GLSLObject::FRAGMENT_SHADER );
+    shader.addShader( resolveShaderPath("vertexShader_passthrough.glsl").c_str(), sivelab::GLSLObject::VERTEX_SHADER ); // Changed this line ot be able to run the example from root instead of inside the OpenGL directory.
+    shader.addShader( resolveShaderPath("fragmentShader_passthrough.glsl").c_str(), sivelab::GLSLObject::FRAGMENT_SHADER );
     shader.createProgram();
 
     double timeDiff = 0.0, startFrameTime = 0.0, endFrameTime = 0.0;
