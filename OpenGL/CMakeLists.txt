@@ -29,6 +29,12 @@ configure_file(
 )
 
 configure_file(
+    vertexShader_withMatrixTransformation.glsl
+    ${CMAKE_BINARY_DIR}/vertexShader_withMatrixTransformation.glsl
+    COPYONLY
+)
+
+configure_file(
     fragmentShader_passthrough.glsl
     ${CMAKE_BINARY_DIR}/fragmentShader_passthrough.glsl
     COPYONLY
@@ -40,6 +46,9 @@ configure_file(
 add_custom_command(TARGET glfwExample POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/vertexShader_passthrough.glsl
+        $<TARGET_FILE_DIR:glfwExample>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/vertexShader_withMatrixTransformation.glsl
         $<TARGET_FILE_DIR:glfwExample>
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${CMAKE_CURRENT_SOURCE_DIR}/fragmentShader_passthrough.glsl

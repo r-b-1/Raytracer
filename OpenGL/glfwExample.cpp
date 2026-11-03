@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-    glClearColor(0.8, 0.3, 0.3, 1.0);
+    glClearColor(0.0, 0.0, 0.0, 1.0);
 
     int fb_width, fb_height;
     glfwGetFramebufferSize(window, &fb_width, &fb_height);
@@ -101,8 +101,6 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     GLuint m_triangleVBO[1];
     GLuint m_VAO;
-
-    glm::mat4 projectionMatrix = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, -10.0f, 10.0f);
 
     GLint major_version;
     glGetIntegerv(GL_MAJOR_VERSION, &major_version);
@@ -148,26 +146,17 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     glBindVertexArray(0);
 
-    // Create a shader using my GLSLObject class                                                            
+    // Create a shader using my GLSLObject class
     sivelab::GLSLObject shader;
-    shader.addShader( resolveShaderPath("vertexShader_passthrough.glsl").c_str(), sivelab::GLSLObject::VERTEX_SHADER ); // Changed this line ot be able to run the example from root instead of inside the OpenGL directory.
+    shader.addShader( resolveShaderPath("vertexShader_withMatrixTransformation.glsl").c_str(), sivelab::GLSLObject::VERTEX_SHADER );
     shader.addShader( resolveShaderPath("fragmentShader_passthrough.glsl").c_str(), sivelab::GLSLObject::FRAGMENT_SHADER );
     shader.createProgram();
 
     GLint projMatrixID = shader.createUniform("projMatrix");
     GLint viewMatrixID = shader.createUniform("viewMatrix");
 
-
     glm::vec3 m_pos(0,0,0), m_viewDir(0,0,-1);
     glm::vec3 m_U(1,0,0), m_V(0,1,0), m_W(0,0,1);
-
-    // Create a shader using my GLSLObject class                                                                                                       
-    shader.addShader( "vertexShader_withMatrices.glsl", sivelab::GLSLObject::VERTEX_SHADER );
-    shader.addShader( "fragmentShader_barycentric.glsl", sivelab::GLSLObject::FRAGMENT_SHADER );
-    shader.createProgram();
-
-    projMatrixID = shader.createUniform( "projMatrix" );
-    viewMatrixID = shader.createUniform( "viewMatrix" );
 
     double timeDiff = 0.0, startFrameTime = 0.0, endFrameTime = 0.0;
     
@@ -183,25 +172,40 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /* Render your objects here */
-
-        shader.activate();
-        glBindVertexArray(m_VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-        glBindVertexArray(0);
-        shader.deactivate();
-        // create the view matrix from our camera data                                                                                                   
         glm::mat4 M_view = glm::lookAt( m_pos, m_pos - m_W, m_V );
 
-        /* Render your objects here */
         shader.activate();
 
-        // copy from the host to the device the view matrix and the projection matrix                                                                                       
+        // copy from the host to the device the view matrix and the projection matrix
         glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_ortho ));
         glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, glm::value_ptr( M_view ));
 
         glBindVertexArray(m_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         glBindVertexArray(0);
+
+        /* Poll for and process events */
+        glfwPollEvents();
+
+        float moveRatePerFrame = 0.05;
+
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        m_pos = m_pos + -m_W * moveRatePerFrame;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        m_pos = m_pos - m_U * moveRatePerFrame;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        m_pos = m_pos + m_W * moveRatePerFrame;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        m_pos = m_pos + m_U * moveRatePerFrame;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+        std::cout << "fps: " << 1.0 / timeDiff << std::endl;
+        }
+
 
         shader.deactivate();
 

@@ -1,15 +1,12 @@
 #version 330 core
 
-layout(location=0) in vec3 in_Position;
-layout(location=1) in vec3 in_Color;
+layout(location = 0) in vec3 in_Position;
+layout(location = 1) in vec3 in_Color;
 
-uniform mat4 projMatrix;
-uniform mat4 viewMatrix;
-
-out vec3 color;
+out vec3 vertexColor;
 
 void main(void)
 {
-  color = in_Color;
-  gl_Position = projMatrix * viewMatrix * vec4(in_Position, 1.0);
+    gl_Position = vec4(in_Position, 1.0);
+    vertexColor = in_Color;
 }
