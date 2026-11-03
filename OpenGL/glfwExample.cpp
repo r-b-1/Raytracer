@@ -89,9 +89,9 @@ int main(void) // Host = CPU, Device = GPU
 
     // this is the actual triangle data that will be copied to                                              
     // the GPU memory                                                                                       
-    std::vector< float > host_VertexBuffer{ -0.5f, -0.5f, 0.0f,    // V0                                    
-                                            0.5f, -0.5f, 0.0f,    // V1                                    
-                                            0.0f, 0.5f, 0.0f };   // V2                                    
+    std::vector< float > host_VertexBuffer{ -0.5f, -0.5f, 0.0f,         1.0f, 1.0f, 1.0f,    // V0                                    
+                                            0.5f, -0.5f, 0.0f,         0.4f, 0.2f, 0.7f,    // V1                                    
+                                            0.0f, 0.5f, 0.0f,         1.0f, 1.0f, 0.0f    };   // V2                                    
 
     int numBytes = host_VertexBuffer.size() * sizeof(float);
 
@@ -113,7 +113,14 @@ int main(void) // Host = CPU, Device = GPU
     // (Position of the vertex)                                                                             
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr);
+
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(
+        1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat),
+        reinterpret_cast<void*>(3 * sizeof(GLfloat))
+    );
+
     glBindVertexArray(0);
 
     // Create a shader using my GLSLObject class                                                            
