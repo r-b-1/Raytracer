@@ -15,6 +15,8 @@ public:
 
     BvhNode(std::vector<std::shared_ptr<Shape>>& objects, size_t start, size_t end) {
         bbox = aabb::empty;
+        if (start == end)
+            return;
         for (size_t i = start; i < end; ++i)
             bbox = aabb(bbox, objects[i]->bounding_box());
 
@@ -44,12 +46,14 @@ public:
     aabb bounding_box() const override { return bbox; }
 
     bool intersect(const Ray& r, float tmin, float& tmax, HitStruct& hit) const override {
-        if (!bbox.hit(r, interval(tmin, tmax)))
+        if (!left || !bbox.hit(r, interval(tmin, tmax)))
             return false;
 
         const bool hit_left = left->intersect(r, tmin, tmax, hit);
         if (hit_left)
             tmax = hit.t();
+        if (left == right)
+            return hit_left;
         const bool hit_right = right->intersect(r, tmin, tmax, hit);
         return hit_left || hit_right;
     }
