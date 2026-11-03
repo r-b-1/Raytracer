@@ -27,8 +27,15 @@ add_library (cs4212-util
   rubiks_cube.cc
   mirror_shader.cc 
   mirror_shader.h
+
+  ISceneLoader.h
+  SceneLoader.h
+  SceneParser_JSON.cpp
+  SceneParser_JSON.h
+
   aabb.h
   bvh.h
+
 )
 target_compile_definitions(cs4212-util PUBLIC HAS_GLM)
 target_link_libraries(cs4212-util PRIVATE Boost::program_options)

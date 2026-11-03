@@ -12,7 +12,7 @@ public:
 
  
         
-    MirrorShader(const Color& baseColor, const std::vector<PointLight>& lights)
+    MirrorShader(const Color& baseColor, const std::vector<std::shared_ptr<Light>>& lights)
         : Shader(lights), baseColor_(baseColor) {}
 
     Color rayColor(const HitStruct& h, const Scene& scene, int depth) const override;

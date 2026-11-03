@@ -19,7 +19,7 @@ public:
           specular_strength_(specular_strength) {}
 
     BlinnPhongShader(const Color& baseColor,
-                     const std::vector<PointLight>& lights,
+                     const std::vector<std::shared_ptr<Light>>& lights,
                      const Color& specular = Color(1, 1, 1),
                      float shininess = 32.0f,
                      float specular_strength = 1.0f)

@@ -8,9 +8,13 @@
 #include "point_light.h"
 #include "shape.h"
 
+class Camera;
+
 class Scene {
 public:
     std::vector<std::shared_ptr<Shape>> objects;
+    std::vector<std::shared_ptr<Camera>> cameras;
+    std::vector<std::shared_ptr<Light>> lights;
 
     PointLight light;
 

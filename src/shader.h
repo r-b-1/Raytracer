@@ -2,6 +2,7 @@
 #define SHADER_H
 
 #include <vector>
+#include <memory>
 
 #include "color.h"
 #include "point_light.h"
@@ -19,13 +20,14 @@ public:
     virtual Color rayColor(const HitStruct& h, const Scene& scene, int depth) const = 0;
 
 
-    const std::vector<PointLight>& lights() const { return lights_; }
+    const std::vector<std::shared_ptr<Light>>& lights() const { return lights_; }
 
 protected:
-    explicit Shader(const PointLight& light = PointLight()) : lights_{light} {}
-    explicit Shader(const std::vector<PointLight>& lights) : lights_(lights) {}
+    explicit Shader(const PointLight& light = PointLight())
+        : lights_{std::make_shared<PointLight>(light)} {}
+    explicit Shader(const std::vector<std::shared_ptr<Light>>& lights) : lights_(lights) {}
 
-    std::vector<PointLight> lights_;
+    std::vector<std::shared_ptr<Light>> lights_;
 };
 
 #endif
