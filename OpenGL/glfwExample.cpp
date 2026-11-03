@@ -88,6 +88,17 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     float halfWidth = 15.0 / 2.0;
     float halfHeight = halfWidth / aspectRatio;
 
+    float left = -halfWidth;
+    float right = halfWidth;
+
+    float bottom = -halfHeight;
+    float top = halfHeight;
+
+    float near = 5.0f;
+    float far = -5.0f;
+
+    glm::mat4 M_ortho = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, near, far);
+
     GLuint m_triangleVBO[1];
     GLuint m_VAO;
 
@@ -103,9 +114,9 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     // this is the actual triangle data that will be copied to                                              
     // the GPU memory                                                                                       
-    std::vector< float > host_VertexBuffer{ -0.5f, -0.5f, 0.0f,         1.0f, 1.0f, 1.0f,    // V0                                    
-                                            0.5f, -0.5f, 0.0f,         0.4f, 0.2f, 0.7f,    // V1                                    
-                                            0.0f, 0.5f, 0.0f,         1.0f, 1.0f, 0.0f    };   // V2                                    
+    std::vector< float > host_VertexBuffer{ -3.0f, -3.0f, 0.0f,         1.0f, 0.0f, 0.0f,    // V0                                    
+                                            3.0f, -3.0f, 0.0f,         0.0f, 1.0f, 0.0f,    // V1                                    
+                                            0.0f, 3.0f, 0.0f,         0.0f, 0.0f, 1.0f    };   // V2                                    
 
     int numBytes = host_VertexBuffer.size() * sizeof(float);
 
@@ -143,6 +154,21 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     shader.addShader( resolveShaderPath("fragmentShader_passthrough.glsl").c_str(), sivelab::GLSLObject::FRAGMENT_SHADER );
     shader.createProgram();
 
+    GLint projMatrixID = shader.createUniform("projMatrix");
+    GLint viewMatrixID = shader.createUniform("viewMatrix");
+
+
+    glm::vec3 m_pos(0,0,0), m_viewDir(0,0,-1);
+    glm::vec3 m_U(1,0,0), m_V(0,1,0), m_W(0,0,1);
+
+    // Create a shader using my GLSLObject class                                                                                                       
+    shader.addShader( "vertexShader_withMatrices.glsl", sivelab::GLSLObject::VERTEX_SHADER );
+    shader.addShader( "fragmentShader_barycentric.glsl", sivelab::GLSLObject::FRAGMENT_SHADER );
+    shader.createProgram();
+
+    projMatrixID = shader.createUniform( "projMatrix" );
+    viewMatrixID = shader.createUniform( "viewMatrix" );
+
     double timeDiff = 0.0, startFrameTime = 0.0, endFrameTime = 0.0;
     
     /* Loop until the user closes the window */
@@ -162,6 +188,21 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         glBindVertexArray(m_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
         glBindVertexArray(0);
+        shader.deactivate();
+        // create the view matrix from our camera data                                                                                                   
+        glm::mat4 M_view = glm::lookAt( m_pos, m_pos - m_W, m_V );
+
+        /* Render your objects here */
+        shader.activate();
+
+        // copy from the host to the device the view matrix and the projection matrix                                                                                       
+        glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_ortho ));
+        glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, glm::value_ptr( M_view ));
+
+        glBindVertexArray(m_VAO);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glBindVertexArray(0);
+
         shader.deactivate();
 
         // Swap the front and back buffers
