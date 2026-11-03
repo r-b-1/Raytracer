@@ -40,6 +40,8 @@ GraphicsArgs::GraphicsArgs()
     bgColor[2] = 0.0f;
     
   reg("help", "help/usage information", ArgumentParsing::NONE, '?');
+  reg("benchmark", "render each scene with and without BVH and print CSV timings", ArgumentParsing::NONE);
+  reg("no-bvh", "render using the flat object list", ArgumentParsing::NONE);
   reg("verbose", "turn on verbose output", ArgumentParsing::NONE, 'v');
   reg("inputfile", "input file name to use", ArgumentParsing::STRING, 'i');
   reg("outputfile", "output file name to use", ArgumentParsing::STRING, 'o');

@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <iostream>
+#include <random>
 
 #include "color.h"
 #include "framebuffer.h"
@@ -40,10 +41,11 @@ public:
 
         #pragma omp parallel for
         for (int j = 0; j < image_height; j++) {
+            std::mt19937 rng(12345u + static_cast<unsigned>(j));
             for (int i = 0; i < image_width; i++) {
                 Color pixel_color(0, 0, 0);
                 for (int s = 0; s < samples_per_pixel; s++) {
-                    pixel_color += trace(scene, get_ray(i, j), max_depth);
+                    pixel_color += trace(scene, get_ray(i, j, rng), max_depth);
                 }
                 pixel_color *= pixel_samples_scale;
                 framebuffer.setPixel(i, j, pixel_color);
@@ -100,11 +102,11 @@ private:
             viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
     }
 
-    Ray get_ray(int i, int j) const {
+    Ray get_ray(int i, int j, std::mt19937& rng) const {
         // Construct a camera ray originating from the origin and directed at randomly sampled
         // point around the pixel location i, j.
 
-        auto offset = sample_square();
+        auto offset = sample_square(rng);
         auto pixel_sample = pixel00_loc
                           + ((i + offset.x()) * pixel_delta_u)
                           + ((j + offset.y()) * pixel_delta_v);
@@ -112,9 +114,12 @@ private:
         return make_ray(pixel_sample);
     }
 
-    Vec3 sample_square() const {
+    Vec3 sample_square(std::mt19937& rng) const {
         // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
-        return Vec3(random_float() - 0.5, random_float() - 0.5, 0);
+        // Use the high 24 bits for reproducible [0,1) floats on every thread.
+        const float x = static_cast<float>(rng() >> 8) * 0x1p-24f;
+        const float y = static_cast<float>(rng() >> 8) * 0x1p-24f;
+        return Vec3(x - 0.5f, y - 0.5f, 0);
     }    
 
 protected:

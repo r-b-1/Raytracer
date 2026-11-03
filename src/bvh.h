@@ -26,8 +26,10 @@ public:
             };
 
         const size_t span = end - start;
-        if (span == 1) {
-            left = right = objects[start];
+        if (span == 0) {
+            return;
+        } else if (span == 1) {
+            left = objects[start];
         } else if (span == 2) {
             left = objects[start];
             right = objects[start + 1];
@@ -44,13 +46,15 @@ public:
     aabb bounding_box() const override { return bbox; }
 
     bool intersect(const Ray& r, float tmin, float& tmax, HitStruct& hit) const override {
-        if (!bbox.hit(r, interval(tmin, tmax)))
+        if (!left || !bbox.hit(r, interval(tmin, tmax)))
             return false;
 
         const bool hit_left = left->intersect(r, tmin, tmax, hit);
         if (hit_left)
             tmax = hit.t();
-        const bool hit_right = right->intersect(r, tmin, tmax, hit);
+        const bool hit_right = right && right->intersect(r, tmin, tmax, hit);
+        if (hit_right)
+            tmax = hit.t();
         return hit_left || hit_right;
     }
 

@@ -61,6 +61,13 @@ public:
 
         for (int axis = 0; axis < 3; axis++) {
             const interval& ax = axis_interval(axis);
+            if (ax.min > ax.max) return false;
+            // Parallel rays on the slab boundary must not produce 0 * infinity.
+            if (ray_dir[axis] == 0.0f) {
+                if (ray_orig[axis] < ax.min || ray_orig[axis] > ax.max)
+                    return false;
+                continue;
+            }
             const float adinv = 1.0f / ray_dir[axis];
 
             auto t0 = (ax.min - ray_orig[axis]) * adinv;
@@ -74,7 +81,7 @@ public:
                 if (t0 < ray_t.max) ray_t.max = t0;
             }
 
-            if (ray_t.max <= ray_t.min)
+            if (ray_t.max < ray_t.min)
                 return false;
         }
         return true;

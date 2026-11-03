@@ -1,4 +1,6 @@
 #include <iostream>
+#include <chrono>
+#include <iomanip>
 #include <memory>
 #include <vector>
 
@@ -16,7 +18,33 @@
 #include "bvh.h"
 
 
-void render_test_scene(int image_width, float aspect_ratio, int samples) {
+// The flat baseline retains per-object AABB tests, but has no hierarchy.
+// Copying a Scene only copies shared pointers; construction is timed separately.
+void render_scene(Camera& camera, const Scene& original, const std::string& filename,
+                  bool use_bvh, bool benchmark) {
+    using Clock = std::chrono::steady_clock;
+    for (int pass = 0; pass < (benchmark ? 2 : 1); ++pass) {
+        const bool accelerated = benchmark ? pass == 1 : use_bvh;
+        Scene scene = original;
+        const auto build_start = Clock::now();
+        if (accelerated) build_bvh(scene.objects);
+        const double build_seconds = std::chrono::duration<double>(Clock::now() - build_start).count();
+        const std::string output = benchmark
+            ? filename.substr(0, filename.size() - 4) + (accelerated ? "_bvh.png" : "_flat.png")
+            : filename;
+        const auto start = Clock::now();
+        camera.render(scene, output);
+        const double seconds = std::chrono::duration<double>(Clock::now() - start).count();
+        if (benchmark) {
+            std::cout << filename << ',' << original.objects.size() << ','
+                      << (accelerated ? "bvh" : "flat") << ',' << camera.image_width << ','
+                      << camera.image_height << ',' << camera.samples_per_pixel << ','
+                      << std::fixed << std::setprecision(6) << build_seconds << ',' << seconds << '\n';
+        }
+    }
+}
+
+void render_test_scene(int image_width, float aspect_ratio, int samples, bool use_bvh, bool benchmark) {
     Scene scene;
 
     const std::vector<PointLight> lights{
@@ -69,8 +97,6 @@ void render_test_scene(int image_width, float aspect_ratio, int samples) {
     scene.objects.push_back(std::make_shared<Sphere>(Point3(0.3, 1, 5), 1, orange));
     scene.objects.push_back(std::make_shared<Sphere>(Point3(2.4, 0.8, 4.8), 0.8, purple));
 
-    build_bvh(scene.objects); // makes the bounding box heirarchy for the obj. in the scene
-
     PerspectiveCamera pcam;
     pcam.lookfrom = Point3(0, 3, 3);
     pcam.lookat = Point3(0, 2.6, 2); // lookfrom + the specified view direction
@@ -82,7 +108,7 @@ void render_test_scene(int image_width, float aspect_ratio, int samples) {
     pcam.image_width = image_width;
     pcam.aspect_ratio = aspect_ratio;
 
-    pcam.render(scene, "scene_perspective.png");
+    render_scene(pcam, scene, "scene_perspective.png", use_bvh, benchmark);
 
     OrthographicCamera ocam;
     ocam.lookfrom = Point3(0, 3, 3);
@@ -94,7 +120,7 @@ void render_test_scene(int image_width, float aspect_ratio, int samples) {
     ocam.image_width = image_width;
     ocam.aspect_ratio = aspect_ratio;
 
-    ocam.render(scene, "scene_orthographic.png");
+    render_scene(ocam, scene, "scene_orthographic.png", use_bvh, benchmark);
 }
 
 int main(int argc, char* argv[]) {
@@ -136,6 +162,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    const bool benchmark = args.isSet("benchmark");
+    const bool use_bvh = !args.isSet("no-bvh");
+    if (benchmark)
+        std::cout << "scene,objects,mode,width,height,rpp,build_seconds,render_seconds\n";
+
     Scene snowman_scene;
     snowman_scene.light.set_position(Point3(0, 10, 5));
 
@@ -171,8 +202,6 @@ int main(int argc, char* argv[]) {
     snowman_scene.objects.push_back(
         std::make_shared<Sphere>(Point3(0, 100.5, -200), 100, sun));
 
-    build_bvh(snowman_scene.objects); // does bvh for the objects in the snowman scene
-
     PerspectiveCamera snowman_cam;
     snowman_cam.lookfrom = Point3(0, 0.8, 1);
     snowman_cam.lookat = Point3(0, 0.65, -1);
@@ -180,7 +209,7 @@ int main(int argc, char* argv[]) {
     snowman_cam.aspect_ratio = aspect_ratio;
     if (rpp_set)
         snowman_cam.samples_per_pixel = rpp;
-    snowman_cam.render(snowman_scene, "snowman.png");
+    render_scene(snowman_cam, snowman_scene, "snowman.png", use_bvh, benchmark);
 
     PerspectiveCamera rubiks_cam;
     // Top, front, and right faces.
@@ -223,9 +252,7 @@ int main(int argc, char* argv[]) {
     rubiks_scene.objects.push_back(std::make_shared<Triangle>(
         wall, wall + wall_u + wall_v, wall + wall_v, back_mirror));
 
-    build_bvh(rubiks_scene.objects); // does bvh for the cube
+    render_scene(rubiks_cam, rubiks_scene, "rubiks.png", use_bvh, benchmark);
 
-    rubiks_cam.render(rubiks_scene, "rubiks.png");
-
-    render_test_scene(image_width, aspect_ratio, rpp_set ? rpp : 100);
+    render_test_scene(image_width, aspect_ratio, rpp_set ? rpp : 100, use_bvh, benchmark);
 }

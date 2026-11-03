@@ -211,3 +211,65 @@ TEST_CASE("Ray default constructor")
     REQUIRE( r.direction().z() == 0 );
 }
 
+
+#include "bvh.h"
+#include "scene.h"
+#include "sphere.h"
+#include "triangle.h"
+
+TEST_CASE("AABB handles parallel boundary rays and grazing hits") {
+    const aabb box(Point3(0, 0, 0), Point3(1, 1, 1));
+    for (float x : {0.0f, 1.0f, 0.5f})
+        REQUIRE(box.hit(Ray(Point3(x, 0.5f, -1), Vec3(0, 0, 1)), interval(0, 10)));
+    REQUIRE_FALSE(box.hit(Ray(Point3(2, 0.5f, -1), Vec3(0, 0, 1)), interval(0, 10)));
+    REQUIRE(box.hit(Ray(Point3(-1, 0, 0.5f), Vec3(1, 1, 0)), interval(0, 10)));
+    REQUIRE_FALSE(aabb::empty.hit(Ray(Point3(), Vec3(0, 0, 1)), interval(0, 10)));
+}
+
+TEST_CASE("Empty and single-object BVHs are safe and update the closest distance") {
+    Scene scene;
+    BvhNode empty(scene.objects);
+    HitStruct hit;
+    float limit = 100;
+    REQUIRE_FALSE(empty.intersect(Ray(Point3(), Vec3(0, 0, -1)), 0, limit, hit));
+    build_bvh(scene.objects);
+    REQUIRE(scene.objects.empty());
+    scene.objects.push_back(std::make_shared<Sphere>(Point3(0, 0, -3), 1));
+    build_bvh(scene.objects);
+    REQUIRE(scene.objects[0]->intersect(Ray(Point3(), Vec3(0, 0, -1)), 0, limit, hit));
+    REQUIRE(limit == 2);
+}
+
+TEST_CASE("BVH matches brute-force primitive intersections for mixed geometry") {
+    Scene scene;
+    for (int x = -3; x <= 3; ++x)
+        scene.objects.push_back(std::make_shared<Sphere>(Point3(x, 0, -5), 0.4f));
+    scene.objects.push_back(std::make_shared<Triangle>(
+        Point3(-4, -1, -2), Point3(4, -1, -2), Point3(0, -1, -10)));
+    const auto primitives = scene.objects;
+    build_bvh(scene.objects);
+    for (int y = -15; y <= 15; ++y) {
+        for (int x = -40; x <= 40; ++x) {
+            const Ray ray(Point3(0, 1, 1), Vec3(x / 20.0f, y / 20.0f, -3));
+            for (float far : {2.0f, 100.0f}) {
+                float flat_limit = far, bvh_limit = far;
+                HitStruct flat_hit, bvh_hit;
+                bool flat_found = false;
+                // Deliberately bypass all bounding boxes to independently check bounds.
+                for (const auto& object : primitives) {
+                    if (object->intersect(ray, 0.001f, flat_limit, flat_hit)) {
+                        flat_limit = flat_hit.t();
+                        flat_found = true;
+                    }
+                }
+                const bool bvh_found = scene.intersect(ray, 0.001f, bvh_limit, bvh_hit);
+                REQUIRE(bvh_found == flat_found);
+                if (flat_found) {
+                    REQUIRE_THAT(bvh_hit.t(), WithinAbs(flat_hit.t(), 0.00001f));
+                    REQUIRE(bvh_hit.shader() == flat_hit.shader());
+                    REQUIRE_THAT((bvh_hit.normal() - flat_hit.normal()).length(), WithinAbs(0, 0.00001f));
+                }
+            }
+        }
+    }
+}
