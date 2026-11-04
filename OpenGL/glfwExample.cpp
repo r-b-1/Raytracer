@@ -97,6 +97,15 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     float near = 5.0f;
     float far = -5.0f;
 
+        // 1. Perspective Setup
+    float fov = glm::radians(45.0f);
+    float height = top - bottom;
+    float width = right - left;
+    float aspect = width / height;
+
+    glm::mat4 M_perspective = glm::perspective(fov, aspect, near, far);
+
+
     glm::mat4 M_ortho = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, near, far);
 
     GLuint m_triangleVBO[1];
@@ -155,7 +164,7 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     GLint projMatrixID = shader.createUniform("projMatrix");
     GLint viewMatrixID = shader.createUniform("viewMatrix");
 
-    glm::vec3 m_pos(0,0,0), m_viewDir(0,0,-1);
+    glm::vec3 m_pos(0,0,5), m_viewDir(0,0,-1);
     glm::vec3 m_U(1,0,0), m_V(0,1,0), m_W(0,0,1);
 
     double timeDiff = 0.0, startFrameTime = 0.0, endFrameTime = 0.0;
@@ -177,8 +186,13 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         shader.activate();
 
         // copy from the host to the device the view matrix and the projection matrix
-        glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_ortho ));
+        // glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_ortho ));
         glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, glm::value_ptr( M_view ));
+
+        glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_perspective ));
+
+
+        
 
         glBindVertexArray(m_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
