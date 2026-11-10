@@ -23,7 +23,7 @@ public:
 
             HitStruct candidate;
 
-            if (object->intersect(r, tmin, tmax, candidate)) {
+            if (object->intersect(r, tmin, tmax, candidate)) { // Adding more object intersect
                 tmax = candidate.t();
                 hit = candidate;
                 found = true;

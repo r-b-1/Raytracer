@@ -13,6 +13,8 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include "GLSL.h" // Open Graphics Library
+#include "orthographic_camera.h"
+#include "perspective_camera.h"
 
 int CheckGLErrors(const char *s)
 {
@@ -81,32 +83,23 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     glfwGetFramebufferSize(window, &fb_width, &fb_height);
     glViewport(0, 0, fb_width, fb_height);
 
-    // Need to set a projection matrix that fits the aspect ratio set
-    // by the window frame.
-    //
-    // The ortho parameters, in order: left, right, bottom, top, zNear, zFar
-    float halfWidth = 15.0 / 2.0;
-    float halfHeight = halfWidth / aspectRatio;
+    // Projection data comes from the same camera classes the ray tracer uses.
+    // The orthographic box is 15 x 15 to match the lab; the perspective camera
+    // has an image plane 2 tall at focal length 2 (about a 53 degree vertical FOV).
+    OrthographicCamera orthoCam;
+    orthoCam.aspect_ratio = aspectRatio;
+    orthoCam.image_plane_height = 15.0f;
 
-    float left = -halfWidth;
-    float right = halfWidth;
+    PerspectiveCamera perspCam;
+    perspCam.aspect_ratio = aspectRatio;
+    perspCam.image_plane_height = 2.0f;
+    perspCam.focal_length = 2.0f;
 
-    float bottom = -halfHeight;
-    float top = halfHeight;
+    // Positive distances in front of the camera; glm::perspective requires near > 0.
+    const float near = 0.1f;
+    const float far = 100.0f;
 
-    float near = 5.0f;
-    float far = -5.0f;
-
-        // 1. Perspective Setup
-    float fov = glm::radians(45.0f);
-    float height = top - bottom;
-    float width = right - left;
-    float aspect = width / height;
-
-    glm::mat4 M_perspective = glm::perspective(fov, aspect, near, far);
-
-
-    glm::mat4 M_ortho = glm::ortho(-halfWidth, halfWidth, -halfHeight, halfHeight, near, far);
+    Camera* activeCamera = &perspCam;
 
     GLuint m_triangleVBO[1];
     GLuint m_VAO;
@@ -163,9 +156,25 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     GLint projMatrixID = shader.createUniform("projMatrix");
     GLint viewMatrixID = shader.createUniform("viewMatrix");
+    GLint modelMatrixID = shader.createUniform("modelMatrix");
 
-    glm::vec3 m_pos(0,0,5), m_viewDir(0,0,-1);
+    // Model transform state, changed every frame (spin) and by the keyboard.
+    glm::vec3 modelTranslation(0.0f, 0.0f, 0.0f);
+    float modelScale = 1.0f;
+    float modelAngle = 0.0f;
+    bool spinning = true;
+    bool spinKeyWasDown = false;
+    const float spinRatePerSecond = glm::radians(45.0f);
+
+    glm::vec3 m_pos(0,0,10);
     glm::vec3 m_U(1,0,0), m_V(0,1,0), m_W(0,0,1);
+
+    // Camera look direction is derived from the basis: forward = -m_W.
+    // (Pitch/yaw rotation disabled for now — ortho camera only needs WASD.)
+    // const glm::vec3 upWorld(0.0f, 1.0f, 0.0f); // fixed axis we yaw around
+    // float pitchAngle = 0.0f; // accumulated look-up/down angle
+    // const float rotateRatePerFrame = glm::radians(1.0f);
+    // const float pitchClamp = glm::radians(85.0f); // don't flip over the top
 
     double timeDiff = 0.0, startFrameTime = 0.0, endFrameTime = 0.0;
     
@@ -181,18 +190,28 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /* Render your objects here */
-        glm::mat4 M_view = glm::lookAt( m_pos, m_pos - m_W, m_V );
+        activeCamera->lookfrom = Point3(m_pos.x, m_pos.y, m_pos.z);
+        glm::vec3 target = m_pos - m_W;
+        activeCamera->lookat = Point3(target.x, target.y, target.z);
+        activeCamera->vup = Vec3(m_V.x, m_V.y, m_V.z);
+
+        glm::mat4 M_view = activeCamera->viewMatrix();
+        glm::mat4 M_proj = activeCamera->projectionMatrix(near, far);
+
+        // if (spinning) {
+        //     modelAngle += spinRatePerSecond * static_cast<float>(timeDiff);
+        // }
+        // Scale, then rotate about the triangle's own Y axis, then translate.
+        glm::mat4 M_model = glm::translate(glm::mat4(1.0f), modelTranslation);
+        M_model = glm::rotate(M_model, modelAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+        M_model = glm::scale(M_model, glm::vec3(modelScale));
 
         shader.activate();
 
-        // copy from the host to the device the view matrix and the projection matrix
-        // glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_ortho ));
+        // copy from the host to the device the projection, view, and model matrices
+        glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_proj ));
         glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, glm::value_ptr( M_view ));
-
-        glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_perspective ));
-
-
-        
+        glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, glm::value_ptr( M_model ));
 
         glBindVertexArray(m_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -216,10 +235,78 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         m_pos = m_pos + m_U * moveRatePerFrame;
         }
 
-        if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+        // How to rotate the camera view: rotate the camera basis vectors.
+        // (Disabled for now — only WASD movement is needed.)
+        //
+        //   F / H — yaw: rotate the basis around the world up axis
+        //   T / G — pitch: rotate V (up) and W (back) around U (right)
+        // if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
+        //     glm::mat4 R_yaw = glm::rotate(glm::mat4(1.0f), rotateRatePerFrame, upWorld);
+        //     m_U = glm::vec3(R_yaw * glm::vec4(m_U, 0.0f));
+        //     m_V = glm::vec3(R_yaw * glm::vec4(m_V, 0.0f));
+        //     m_W = glm::vec3(R_yaw * glm::vec4(m_W, 0.0f));
+        // }
+        // else if (glfwGetKey(window, GLFW_KEY_H) == GLFW_PRESS) {
+        //     glm::mat4 R_yaw = glm::rotate(glm::mat4(1.0f), -rotateRatePerFrame, upWorld);
+        //     m_U = glm::vec3(R_yaw * glm::vec4(m_U, 0.0f));
+        //     m_V = glm::vec3(R_yaw * glm::vec4(m_V, 0.0f));
+        //     m_W = glm::vec3(R_yaw * glm::vec4(m_W, 0.0f));
+        // }
+
+        // if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS && pitchAngle < pitchClamp) {
+        //     pitchAngle += rotateRatePerFrame;
+        //     glm::mat4 R_pitch = glm::rotate(glm::mat4(1.0f), rotateRatePerFrame, m_U);
+        //     m_V = glm::vec3(R_pitch * glm::vec4(m_V, 0.0f));
+        //     m_W = glm::vec3(R_pitch * glm::vec4(m_W, 0.0f));
+        // }
+        // else if (glfwGetKey(window, GLFW_KEY_G) == GLFW_PRESS && pitchAngle > -pitchClamp) {
+        //     pitchAngle -= rotateRatePerFrame;
+        //     glm::mat4 R_pitch = glm::rotate(glm::mat4(1.0f), -rotateRatePerFrame, m_U);
+        //     m_V = glm::vec3(R_pitch * glm::vec4(m_V, 0.0f));
+        //     m_W = glm::vec3(R_pitch * glm::vec4(m_W, 0.0f));
+        // }
+
+        if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
         std::cout << "fps: " << 1.0 / timeDiff << std::endl;
         }
 
+        //   P / O — perspective / orthographic projection
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+            activeCamera = &perspCam;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_O) == GLFW_PRESS) {
+            activeCamera = &orthoCam;
+        }
+
+        // Model matrix controls:
+        //   arrow keys — translate the triangle in X / Y
+        //   Z / X      — shrink / grow the triangle
+        //   R          — toggle spinning
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+            modelTranslation.x -= moveRatePerFrame;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+            modelTranslation.x += moveRatePerFrame;
+        }
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
+            modelTranslation.y += moveRatePerFrame;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+            modelTranslation.y -= moveRatePerFrame;
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
+            modelScale = glm::max(0.1f, modelScale - 0.01f);
+        }
+        else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
+            modelScale += 0.01f;
+        }
+
+        bool spinKeyDown = glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS;
+        if (spinKeyDown && !spinKeyWasDown) {
+            spinning = !spinning;
+        }
+        spinKeyWasDown = spinKeyDown;
 
         shader.deactivate();
 
@@ -229,9 +316,6 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         /* Poll for and process events */
         glfwPollEvents();
 
-        if (glfwGetKey( window, GLFW_KEY_T ) == GLFW_PRESS) {
-            std::cout << "fps: " << 1.0/timeDiff << std::endl;
-        }
         if (glfwGetKey( window, GLFW_KEY_ESCAPE ) == GLFW_PRESS) {
             glfwSetWindowShouldClose(window, 1);
         }

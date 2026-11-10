@@ -4,6 +4,9 @@
 #include <atomic>
 #include <iostream>
 
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+
 #include "color.h"
 #include "framebuffer.h"
 
@@ -65,6 +68,17 @@ public:
         framebuffer.exportAsPNG(filename);
     }
 
+    // Rasterization (OpenGL) view matrix: world space -> camera space.
+    glm::mat4 viewMatrix() const {
+        return glm::lookAt(toGlm(lookfrom), toGlm(lookat), toGlm(vup));
+    }
+
+    // Rasterization (OpenGL) projection matrix: camera space -> clip space.
+    // near and far are positive distances along the viewing direction (-w).
+    virtual glm::mat4 projectionMatrix(float near, float far) const = 0;
+
+    virtual ~Camera() = default;
+
 private:
     float pixel_samples_scale;
     Framebuffer framebuffer;
@@ -118,6 +132,8 @@ private:
     }    
 
 protected:
+    static glm::vec3 toGlm(const Vec3& v) { return glm::vec3(v.x(), v.y(), v.z()); }
+
     Point3 camera_center;
     Vec3 w;
 

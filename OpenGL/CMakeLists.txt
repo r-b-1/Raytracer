@@ -5,6 +5,7 @@ add_executable (glfwExample
   GLSL.cpp GLSL.h
 )
 
+target_link_libraries (glfwExample PRIVATE cs4212-util)
 target_link_libraries (glfwExample PRIVATE GLEW::GLEW)
 target_link_libraries (glfwExample PRIVATE glfw)
 
