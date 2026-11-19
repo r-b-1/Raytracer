@@ -114,10 +114,10 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     // this is the actual triangle data that will be copied to                                              
     // the GPU memory                                                                                       
-    std::vector< float > host_VertexBuffer{ -3.0f, -3.0f, 0.0f,         1.0f, 0.0f, 0.0f,    // V0                                    
-                                            3.0f, -3.0f, 0.0f,         0.0f, 1.0f, 0.0f,    // V1                                    
-                                            0.0f, 3.0f, 0.0f,         0.0f, 0.0f, 1.0f    };   // V2                                    
-
+    std::vector< float > host_VertexBuffer{ -3.0f, -3.0f, 0.0f,         0.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f, // V0 Red                        
+                                            3.0f, -3.0f, 0.0f,         0.0f, 0.0f, 1.0f,    1.0f, .0f, 0.0f, // V1 Green                       
+                                            0.0f, 3.0f, 0.0f,         0.0f, 0.0f, 1.0f,    1.0f, 0.0f, .0f, // V2 Blue                      
+    };
     int numBytes = host_VertexBuffer.size() * sizeof(float);
 
     // copy the numBytes from host_VertexBuffer t the GPU and store in                                      
@@ -136,27 +136,40 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     // VAO details here - we only have 1 attribute or location                                              
     // (Position of the vertex)                                                                             
-    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(0); // This is the position attribute
     glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), nullptr); // Changed from 6 to 9 to include color, this is the size of the matrix.
 
-    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(1); // This is the normal attribute
     glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat),
+        1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat),
         reinterpret_cast<void*>(3 * sizeof(GLfloat))
+    );
+
+    glEnableVertexAttribArray(2); // This is the color attribute
+    glVertexAttribPointer(
+        2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat),
+        reinterpret_cast<void*>(6 * sizeof(GLfloat))
     );
 
     glBindVertexArray(0);
 
     // Create a shader using my GLSLObject class
     sivelab::GLSLObject shader;
-    shader.addShader( resolveShaderPath("vertexShader_withMatrixTransformation.glsl").c_str(), sivelab::GLSLObject::VERTEX_SHADER );
+    shader.addShader( resolveShaderPath("vertexShader_PrepForPerFragment.glsl").c_str(), sivelab::GLSLObject::VERTEX_SHADER ); // New shader for lambertian
     shader.addShader( resolveShaderPath("fragmentShader_passthrough.glsl").c_str(), sivelab::GLSLObject::FRAGMENT_SHADER );
     shader.createProgram();
 
     GLint projMatrixID = shader.createUniform("projMatrix");
     GLint viewMatrixID = shader.createUniform("viewMatrix");
     GLint modelMatrixID = shader.createUniform("modelMatrix");
+    GLint normalMatrixID = shader.createUniform("normalMatrix");
+    GLint lightPosWorldID = shader.createUniform("lightPosWorld");
+    GLint diffuseComponentID = shader.createUniform("diffuseComponent");
+
+    // Adds a point light om the side of the triangle the camera is on.
+    const glm::vec4 lightPosWorld(0.0f, 1.0f, 3.0f, 1.0f);
+    const glm::vec3 diffuseComponent(1.0f, 1.0f, 1.0f);
 
     // Model transform state, changed every frame (spin) and by the keyboard.
     glm::vec3 modelTranslation(0.0f, 0.0f, 0.0f);
@@ -198,6 +211,12 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         glm::mat4 M_view = activeCamera->viewMatrix();
         glm::mat4 M_proj = activeCamera->projectionMatrix(near, far);
 
+        glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, near, far);
+        glm::mat4 viewMatrix = glm::lookAt(m_pos, target, m_V);
+        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), modelTranslation);
+        modelMatrix = glm::rotate(modelMatrix, modelAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(modelScale));
+
         // if (spinning) {
         //     modelAngle += spinRatePerSecond * static_cast<float>(timeDiff);
         // }
@@ -206,12 +225,23 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         M_model = glm::rotate(M_model, modelAngle, glm::vec3(0.0f, 1.0f, 0.0f));
         M_model = glm::scale(M_model, glm::vec3(modelScale));
 
+        // Below is a note for me to remember about Normals.
+
+        // Normals are directions. The inverse-transpose of the model matrix
+        // keeps them perpendicular to the surface after non-uniform scale.
+        // lightDir in the vertex shader is in world space, so this matrix
+        // must take normals to world space too (model, not model-view).
+        glm::mat4 M_normal = glm::transpose(glm::inverse(M_model));
+
         shader.activate();
 
         // copy from the host to the device the projection, view, and model matrices
         glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_proj ));
         glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, glm::value_ptr( M_view ));
         glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, glm::value_ptr( M_model ));
+        glUniformMatrix4fv(normalMatrixID, 1, GL_FALSE, glm::value_ptr( M_normal ));
+        glUniform4fv(lightPosWorldID, 1, glm::value_ptr(lightPosWorld));
+        glUniform3fv(diffuseComponentID, 1, glm::value_ptr(diffuseComponent));
 
         glBindVertexArray(m_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
