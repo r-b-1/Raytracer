@@ -13,6 +13,7 @@
 #include "glm/gtc/type_ptr.hpp"
 
 #include "GLSL.h" // Open Graphics Library
+#include "model_obj.h"
 #include "orthographic_camera.h"
 #include "perspective_camera.h"
 
@@ -146,40 +147,49 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     Camera* activeCamera = &perspCam;
 
     GLuint m_triangleVBO[1];
+    GLuint m_indexVBO;
     GLuint m_VAO;
 
     GLint major_version;
     glGetIntegerv(GL_MAJOR_VERSION, &major_version);
     std::cout << "GL_MAJOR_VERSION: " << major_version << std::endl;
 
-    // create a Vertex Array Buffer to hold our triangle data                                               
+    // Load the triangle mesh: center it and scale its longest side to 6 units,
+    // matching the single triangle this used to draw.
+    ModelOBJ obj;
+    if (!obj.import("assets/bunny.obj")) {
+        std::cerr << "Could not load assets/bunny.obj (run from the project root)." << std::endl;
+        glfwTerminate();
+        return -1;
+    }
+    obj.normalize(6.0f, true);
+
+    // Pack position (xyz) followed by normal (xyz) per vertex, the layout the
+    // shaders expect.
+    std::vector< float > host_VertexBuffer;
+    host_VertexBuffer.reserve(obj.getNumberOfVertices() * 6);
+    for (int i = 0; i < obj.getNumberOfVertices(); i++) {
+        const ModelOBJ::Vertex& v = obj.getVertex(i);
+        host_VertexBuffer.insert(host_VertexBuffer.end(),
+                                 { v.position[0], v.position[1], v.position[2],
+                                   v.normal[0], v.normal[1], v.normal[2] });
+    }
+
+    std::vector< unsigned int > indexBuffer(
+        obj.getIndexBuffer(), obj.getIndexBuffer() + obj.getNumberOfIndices());
+
+    // create a Vertex Array Buffer to hold our mesh data
     glGenBuffers(1, m_triangleVBO);
     glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
+    glBufferData(GL_ARRAY_BUFFER, host_VertexBuffer.size() * sizeof(float),
+                 host_VertexBuffer.data(), GL_STATIC_DRAW);
 
-    // this is the actual triangle data that will be copied to
-    // the GPU memory: position (xyz) followed by normal (xyz) per vertex.
-    std::vector< float > host_VertexBuffer{ -3.0f, -3.0f, 0.0f,     0.0f, 0.0f, 1.0f, // V0
-                                            3.0f, -3.0f, 0.0f,     0.0f, 0.0f, 1.0f, // V1
-                                            0.0f, 3.0f, 0.0f,      0.0f, 0.0f, 1.0f, // V2
-    };
-    int numBytes = host_VertexBuffer.size() * sizeof(float);
-
-    // copy the numBytes from host_VertexBuffer t the GPU and store in                                      
-    // the currently bound VBO                                                                              
-    glBufferData(GL_ARRAY_BUFFER, numBytes, host_VertexBuffer.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    // once copied, we no longer need the data on the host                                                  
-    host_VertexBuffer.clear();
-
-    // create a vertex array object that will map the attributes in                                         
-    // our vertex buffer to different location attributes for our                                           
-    // shaders                                                                                              
+    // create a vertex array object that will map the attributes in
+    // our vertex buffer to different location attributes for our
+    // shaders
     glGenVertexArrays(1, &m_VAO);
     glBindVertexArray(m_VAO);
 
-    // VAO details here - we only have 1 attribute or location                                              
-    // (Position of the vertex)                                                                             
     glEnableVertexAttribArray(0); // This is the position attribute
     glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr); // 6 floats per vertex: position + normal
@@ -189,6 +199,13 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat),
         reinterpret_cast<void*>(3 * sizeof(GLfloat))
     );
+
+    // The index buffer binding belongs to the VAO, so bind it while the VAO is
+    // bound or glDrawElements will not find it.
+    glGenBuffers(1, &m_indexVBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexVBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer.size() * sizeof(unsigned int),
+                 indexBuffer.data(), GL_STATIC_DRAW);
 
     glBindVertexArray(0);
 
@@ -315,7 +332,7 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         glUniform1f(u.phongExponentID, phongExponent);
 
         glBindVertexArray(m_VAO);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        glDrawElements(GL_TRIANGLES, obj.getNumberOfIndices(), GL_UNSIGNED_INT, nullptr);
         glBindVertexArray(0);
 
         /* Poll for and process events */
