@@ -23,46 +23,31 @@ endif()
 target_link_libraries (glfwExample PRIVATE PNG::PNG)
 target_link_libraries (glfwExample PRIVATE ZLIB::ZLIB)
 
-configure_file(
+# Every shader is copied into the build tree and next to the executable so the
+# program can be launched from anywhere (including the project root).
+set(GLSL_SHADERS
     vertexShader_passthrough.glsl
-    ${CMAKE_BINARY_DIR}/vertexShader_passthrough.glsl
-    COPYONLY
-)
-
-configure_file(
     vertexShader_withMatrixTransformation.glsl
-    ${CMAKE_BINARY_DIR}/vertexShader_withMatrixTransformation.glsl
-    COPYONLY
-)
-
-configure_file(
-    fragmentShader_passthrough.glsl
-    ${CMAKE_BINARY_DIR}/fragmentShader_passthrough.glsl
-    COPYONLY
-)
-
-configure_file(
     vertexShader_PrepForPerFragment.glsl
-    ${CMAKE_BINARY_DIR}/vertexShader_PrepForPerFragment.glsl
-    COPYONLY
+    fragmentShader_Lambertian.glsl
+    fragmentShader_BlinnPhong.glsl
+    fragmentShader_Normal.glsl
 )
 
-# Also copy the shaders next to the executable (configure_file() can't use
-# generator expressions like $<TARGET_FILE_DIR:...>, so this runs post-build).
-# This lets OpenGL/glfwExample be run from anywhere, including the project root.
-add_custom_command(TARGET glfwExample POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_SOURCE_DIR}/vertexShader_passthrough.glsl
-        $<TARGET_FILE_DIR:glfwExample>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_SOURCE_DIR}/vertexShader_withMatrixTransformation.glsl
-        $<TARGET_FILE_DIR:glfwExample>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_SOURCE_DIR}/fragmentShader_passthrough.glsl
-        $<TARGET_FILE_DIR:glfwExample>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_SOURCE_DIR}/vertexShader_PrepForPerFragment.glsl
-        $<TARGET_FILE_DIR:glfwExample>
-    COMMENT "Copying GLSL shaders next to glfwExample"
-)
+foreach(shader ${GLSL_SHADERS})
+    configure_file(
+        ${shader}
+        ${CMAKE_BINARY_DIR}/${shader}
+        COPYONLY
+    )
+
+    # configure_file() can't use generator expressions like
+    # $<TARGET_FILE_DIR:...>, so the copy next to the binary runs post-build.
+    add_custom_command(TARGET glfwExample POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/${shader}
+            $<TARGET_FILE_DIR:glfwExample>
+    )
+endforeach()
+
 

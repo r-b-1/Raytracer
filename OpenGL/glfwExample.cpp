@@ -16,6 +16,33 @@
 #include "orthographic_camera.h"
 #include "perspective_camera.h"
 
+namespace {
+
+enum ShaderMode {
+    LAMBERTIAN,
+    BLINN_PHONG,
+    NORMAL_SHADER,
+    NumShaders
+};
+
+const char* shaderNames[NumShaders] = { "Lambertian", "Blinn-Phong", "Normal" };
+
+// Uniform locations are per program. A location of -1 means that program does
+// not use the uniform, and glUniform silently ignores -1.
+struct ShaderUniforms {
+    GLint projMatrixID = -1;
+    GLint viewMatrixID = -1;
+    GLint modelMatrixID = -1;
+    GLint normalMatrixID = -1;
+    GLint lightPosWorldID = -1;
+    GLint diffuseComponentID = -1;
+    GLint specularComponentID = -1;
+    GLint phongExponentID = -1;
+    GLint eyePosWorldID = -1;
+};
+
+} // namespace
+
 int CheckGLErrors(const char *s)
 {
     int errCount = 0;
@@ -35,6 +62,23 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         if (fs::exists(nearExe)) return nearExe.string();            // next to the binary
         return std::string(file); // let GLSLObject produce its usual error
     };
+
+    // Optional command line argument to start in a given shading mode, so the
+    // same executable can be launched straight into one shader for screenshots:
+    //   ./glfwExample blinn   |   ./glfwExample normal   |   ./glfwExample lambert
+    int activeShader = LAMBERTIAN;
+    for (int i = 1; i < argc; i++) {
+        const std::string arg = argv[i];
+        if (arg == "blinn" || arg == "--blinn" || arg == "blinn-phong") {
+            activeShader = BLINN_PHONG;
+        }
+        else if (arg == "normal" || arg == "--normal") {
+            activeShader = NORMAL_SHADER;
+        }
+        else if (arg == "lambert" || arg == "--lambert" || arg == "lambertian") {
+            activeShader = LAMBERTIAN;
+        }
+    }
 
     /* Initialize the library */
     if (!glfwInit()) {
@@ -112,11 +156,11 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     glGenBuffers(1, m_triangleVBO);
     glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
 
-    // this is the actual triangle data that will be copied to                                              
-    // the GPU memory                                                                                       
-    std::vector< float > host_VertexBuffer{ -3.0f, -3.0f, 0.0f,         0.0f, 0.0f, 1.0f,    1.0f, 0.0f, 0.0f, // V0 Red                        
-                                            3.0f, -3.0f, 0.0f,         0.0f, 0.0f, 1.0f,    1.0f, .0f, 0.0f, // V1 Green                       
-                                            0.0f, 3.0f, 0.0f,         0.0f, 0.0f, 1.0f,    1.0f, 0.0f, .0f, // V2 Blue                      
+    // this is the actual triangle data that will be copied to
+    // the GPU memory: position (xyz) followed by normal (xyz) per vertex.
+    std::vector< float > host_VertexBuffer{ -3.0f, -3.0f, 0.0f,     0.0f, 0.0f, 1.0f, // V0
+                                            3.0f, -3.0f, 0.0f,     0.0f, 0.0f, 1.0f, // V1
+                                            0.0f, 3.0f, 0.0f,      0.0f, 0.0f, 1.0f, // V2
     };
     int numBytes = host_VertexBuffer.size() * sizeof(float);
 
@@ -138,44 +182,58 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     // (Position of the vertex)                                                                             
     glEnableVertexAttribArray(0); // This is the position attribute
     glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat), nullptr); // Changed from 6 to 9 to include color, this is the size of the matrix.
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr); // 6 floats per vertex: position + normal
 
     glEnableVertexAttribArray(1); // This is the normal attribute
     glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat),
+        1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat),
         reinterpret_cast<void*>(3 * sizeof(GLfloat))
-    );
-
-    glEnableVertexAttribArray(2); // This is the color attribute
-    glVertexAttribPointer(
-        2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(GLfloat),
-        reinterpret_cast<void*>(6 * sizeof(GLfloat))
     );
 
     glBindVertexArray(0);
 
-    // Create a shader using my GLSLObject class
-    sivelab::GLSLObject shader;
-    shader.addShader( resolveShaderPath("vertexShader_PrepForPerFragment.glsl").c_str(), sivelab::GLSLObject::VERTEX_SHADER ); // New shader for lambertian
-    shader.addShader( resolveShaderPath("fragmentShader_passthrough.glsl").c_str(), sivelab::GLSLObject::FRAGMENT_SHADER );
-    shader.createProgram();
+    // Three programs share the same vertex shader. The vertex stage hands the
+    // world-space normal, light direction, and position to the fragment stage,
+    // so only the fragment programs differ between shading models.
+    const char* prepVertexShader = "vertexShader_PrepForPerFragment.glsl";
+    const char* fragmentShaders[NumShaders] = {
+        "fragmentShader_Lambertian.glsl",
+        "fragmentShader_BlinnPhong.glsl",
+        "fragmentShader_Normal.glsl",
+    };
 
-    GLint projMatrixID = shader.createUniform("projMatrix");
-    GLint viewMatrixID = shader.createUniform("viewMatrix");
-    GLint modelMatrixID = shader.createUniform("modelMatrix");
-    GLint normalMatrixID = shader.createUniform("normalMatrix");
-    GLint lightPosWorldID = shader.createUniform("lightPosWorld");
-    GLint diffuseComponentID = shader.createUniform("diffuseComponent");
+    sivelab::GLSLObject shaders[NumShaders];
+    ShaderUniforms uniforms[NumShaders];
 
-    // Adds a point light om the side of the triangle the camera is on.
+    for (int i = 0; i < NumShaders; i++) {
+        shaders[i].addShader( resolveShaderPath(prepVertexShader).c_str(), sivelab::GLSLObject::VERTEX_SHADER );
+        shaders[i].addShader( resolveShaderPath(fragmentShaders[i]).c_str(), sivelab::GLSLObject::FRAGMENT_SHADER );
+        shaders[i].createProgram();
+
+        uniforms[i].projMatrixID = shaders[i].createUniform("projMatrix");
+        uniforms[i].viewMatrixID = shaders[i].createUniform("viewMatrix");
+        uniforms[i].modelMatrixID = shaders[i].createUniform("modelMatrix");
+        uniforms[i].normalMatrixID = shaders[i].createUniform("normalMatrix");
+        uniforms[i].lightPosWorldID = shaders[i].createUniform("lightPosWorld");
+        uniforms[i].diffuseComponentID = shaders[i].createUniform("diffuseComponent");
+        uniforms[i].specularComponentID = shaders[i].createUniform("specularComponent");
+        uniforms[i].phongExponentID = shaders[i].createUniform("phongExponent");
+        uniforms[i].eyePosWorldID = shaders[i].createUniform("eyePosWorld");
+    }
+
+    // Adds a point light in front of the triangle, on the same side as the camera.
     const glm::vec4 lightPosWorld(0.0f, 1.0f, 3.0f, 1.0f);
-    const glm::vec3 diffuseComponent(1.0f, 1.0f, 1.0f);
+    const glm::vec3 diffuseComponent(0.8f, 0.3f, 0.8f); // Set color of the triangle here for non-normal.
+    const glm::vec3 specularComponent(1.0f, 1.0f, 1.0f);
+    const float phongExponent = 32.0f;
+
+    std::cout << "Shading keys: 1 = Lambertian, 2 = Blinn-Phong, 3 = Normal\n";
 
     // Model transform state, changed every frame (spin) and by the keyboard.
     glm::vec3 modelTranslation(0.0f, 0.0f, 0.0f);
     float modelScale = 1.0f;
     float modelAngle = 0.0f;
-    bool spinning = true;
+    bool spinning = false;
     bool spinKeyWasDown = false;
     const float spinRatePerSecond = glm::radians(45.0f);
 
@@ -190,6 +248,7 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     // const float pitchClamp = glm::radians(85.0f); // don't flip over the top
 
     double timeDiff = 0.0, startFrameTime = 0.0, endFrameTime = 0.0;
+    int shownShader = -1;
     
     /* Loop until the user closes the window */
     while (!glfwWindowShouldClose(window))
@@ -211,15 +270,12 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         glm::mat4 M_view = activeCamera->viewMatrix();
         glm::mat4 M_proj = activeCamera->projectionMatrix(near, far);
 
-        glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), aspectRatio, near, far);
-        glm::mat4 viewMatrix = glm::lookAt(m_pos, target, m_V);
-        glm::mat4 modelMatrix = glm::translate(glm::mat4(1.0f), modelTranslation);
-        modelMatrix = glm::rotate(modelMatrix, modelAngle, glm::vec3(0.0f, 1.0f, 0.0f));
-        modelMatrix = glm::scale(modelMatrix, glm::vec3(modelScale));
+        // Spin about the triangle's Y axis when enabled (R toggles it). This
+        // makes the changing normal visible in the normal shader.
+        if (spinning) {
+            modelAngle += spinRatePerSecond * static_cast<float>(timeDiff);
+        }
 
-        // if (spinning) {
-        //     modelAngle += spinRatePerSecond * static_cast<float>(timeDiff);
-        // }
         // Scale, then rotate about the triangle's own Y axis, then translate.
         glm::mat4 M_model = glm::translate(glm::mat4(1.0f), modelTranslation);
         M_model = glm::rotate(M_model, modelAngle, glm::vec3(0.0f, 1.0f, 0.0f));
@@ -233,15 +289,30 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         // must take normals to world space too (model, not model-view).
         glm::mat4 M_normal = glm::transpose(glm::inverse(M_model));
 
+        // Select the active shading program and upload this frame's uniforms.
+        sivelab::GLSLObject& shader = shaders[activeShader];
+        const ShaderUniforms& u = uniforms[activeShader];
+
+        if (shownShader != activeShader) {
+            const std::string title = std::string("GLFW Example - ") + shaderNames[activeShader];
+            glfwSetWindowTitle(window, title.c_str());
+            shownShader = activeShader;
+        }
+
         shader.activate();
 
         // copy from the host to the device the projection, view, and model matrices
-        glUniformMatrix4fv(projMatrixID, 1, GL_FALSE, glm::value_ptr( M_proj ));
-        glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, glm::value_ptr( M_view ));
-        glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, glm::value_ptr( M_model ));
-        glUniformMatrix4fv(normalMatrixID, 1, GL_FALSE, glm::value_ptr( M_normal ));
-        glUniform4fv(lightPosWorldID, 1, glm::value_ptr(lightPosWorld));
-        glUniform3fv(diffuseComponentID, 1, glm::value_ptr(diffuseComponent));
+        glUniformMatrix4fv(u.projMatrixID, 1, GL_FALSE, glm::value_ptr( M_proj ));
+        glUniformMatrix4fv(u.viewMatrixID, 1, GL_FALSE, glm::value_ptr( M_view ));
+        glUniformMatrix4fv(u.modelMatrixID, 1, GL_FALSE, glm::value_ptr( M_model ));
+        glUniformMatrix4fv(u.normalMatrixID, 1, GL_FALSE, glm::value_ptr( M_normal ));
+
+        const glm::vec4 eyePosWorld(m_pos, 1.0f);
+        glUniform4fv(u.lightPosWorldID, 1, glm::value_ptr(lightPosWorld));
+        glUniform4fv(u.eyePosWorldID, 1, glm::value_ptr(eyePosWorld));
+        glUniform3fv(u.diffuseComponentID, 1, glm::value_ptr(diffuseComponent));
+        glUniform3fv(u.specularComponentID, 1, glm::value_ptr(specularComponent));
+        glUniform1f(u.phongExponentID, phongExponent);
 
         glBindVertexArray(m_VAO);
         glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -298,6 +369,17 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
         if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
         std::cout << "fps: " << 1.0 / timeDiff << std::endl;
+        }
+
+        //   1 / 2 / 3 — Lambertian / Blinn-Phong / Normal shading
+        if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) {
+            activeShader = LAMBERTIAN;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) {
+            activeShader = BLINN_PHONG;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS) {
+            activeShader = NORMAL_SHADER;
         }
 
         //   P / O — perspective / orthographic projection
