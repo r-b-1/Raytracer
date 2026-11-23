@@ -17,6 +17,9 @@ cmake-build-debug/
 *.o
 *.obj
 
+# ...except the OBJ models the renderers load (assets/bunny.obj).
+!assets/*.obj
+
 # Precompiled Headers
 *.gch
 *.pch

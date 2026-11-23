@@ -15,6 +15,7 @@
 
 #include "aabb.h"
 #include "bvh.h"
+#include "obj_mesh.h"
 
 #include "SceneParser_JSON.h"
 #include "SceneLoader.h"
@@ -100,6 +101,77 @@ void render_test_scene(int image_width, float aspect_ratio, int samples) {
     ocam.render(scene, "scene_orthographic.png");
 }
 
+// Two snowmen built from spheres, reusing the model from the ray tracer's
+// snowman scene. `base` is the center of the bottom snowball.
+void add_snowman(Scene& scene, const Point3& base,
+                 const std::shared_ptr<Shader>& snow,
+                 const std::shared_ptr<Shader>& coal,
+                 const std::shared_ptr<Shader>& carrot) {
+    scene.objects.push_back(std::make_shared<Sphere>(base, 0.75f, snow));
+    scene.objects.push_back(std::make_shared<Sphere>(base + Point3(0, 1.125f, 0), 0.60f, snow));
+    scene.objects.push_back(std::make_shared<Sphere>(base + Point3(0, 1.875f, 0), 0.405f, snow));
+
+    // Buttons on the middle snowball, facing the camera (+z). Sized to the
+    // same proportion as the ray tracer's original snowman (0.1 on a 0.4 ball).
+    scene.objects.push_back(std::make_shared<Sphere>(base + Point3(0, 0.90f, 0.556f), 0.09f, coal));
+    scene.objects.push_back(std::make_shared<Sphere>(base + Point3(0, 1.125f, 0.60f), 0.09f, coal));
+    scene.objects.push_back(std::make_shared<Sphere>(base + Point3(0, 1.35f, 0.556f), 0.09f, coal));
+
+    // Big eyes and a small carrot nose on the head.
+    scene.objects.push_back(std::make_shared<Sphere>(base + Point3(-0.30f, 1.975f, 0.28f), 0.17f, coal));
+    scene.objects.push_back(std::make_shared<Sphere>(base + Point3(0.30f, 1.975f, 0.28f), 0.17f, coal));
+    scene.objects.push_back(std::make_shared<Sphere>(base + Point3(0, 1.82f, 0.40f), 0.10f, carrot));
+}
+
+// The scene used for the ray tracer / OpenGL side-by-side comparison. The
+// OpenGL app draws the same geometry, camera, light, and colors.
+void render_comparison_scene(int image_width, float aspect_ratio, int samples) {
+    Scene scene;
+    scene.light.set_position(Point3(0, 6, 5));
+    scene.light.set_intensity(Color(1, 1, 1));
+
+    auto floor = std::make_shared<LambertianShader>(
+        Color(0.45f, 0.45f, 0.42f), scene.light);
+    auto bunny = std::make_shared<BlinnPhongShader>(
+        Color(0.8f, 0.3f, 0.8f), Color(1, 1, 1), 32.0f, 1.0f, scene.light);
+    auto sun = std::make_shared<BlinnPhongShader>(
+        Color(1.0f, 0.9f, 0.15f), Color(1, 1, 1), 32.0f, 1.0f, scene.light);
+    auto snow = std::make_shared<BlinnPhongShader>(
+        Color(0.95f, 0.95f, 0.95f), Color(1, 1, 1), 32.0f, 1.0f, scene.light);
+    auto coal = std::make_shared<BlinnPhongShader>(
+        Color(0.03f, 0.03f, 0.03f), Color(1, 1, 1), 32.0f, 1.0f, scene.light);
+    auto carrot = std::make_shared<BlinnPhongShader>(
+        Color(1.0f, 0.35f, 0.05f), Color(1, 1, 1), 32.0f, 1.0f, scene.light);
+
+    // Floor at y = -3: the bunny's feet and the snowmen touch it.
+    scene.objects.push_back(std::make_shared<Triangle>(
+        Point3(-100, -3, 100), Point3(100, -3, 100), Point3(100, -3, -100), floor));
+    scene.objects.push_back(std::make_shared<Triangle>(
+        Point3(-100, -3, 100), Point3(100, -3, -100), Point3(-100, -3, -100), floor));
+
+    scene.objects.push_back(
+        load_obj_mesh("assets/bunny.obj", bunny, Point3(0, 0, 0), 6.0f));
+
+    add_snowman(scene, Point3(-2.9f, -2.25f, 2.2f), snow, coal, carrot);
+    add_snowman(scene, Point3(2.9f, -2.25f, 2.2f), snow, coal, carrot);
+
+    // Sun: the same huge background sphere used in the snowman scene.
+    scene.objects.push_back(std::make_shared<Sphere>(Point3(0, 100, -200), 100, sun));
+
+    build_bvh(scene.objects);
+
+    PerspectiveCamera cam;
+    cam.lookfrom = Point3(0, 0, 10);
+    cam.lookat = Point3(0, 0, 0);
+    cam.image_plane_height = 2.0f;
+    cam.focal_length = 2.0f;
+    cam.max_depth = 1; // Direct lighting only.
+    cam.samples_per_pixel = samples;
+    cam.image_width = image_width;
+    cam.aspect_ratio = aspect_ratio;
+    cam.render(scene, "raytrace.png");
+}
+
 int main(int argc, char* argv[]) {
     sivelab::GraphicsArgs args;
     try {
@@ -154,6 +226,14 @@ int main(int argc, char* argv[]) {
     if (rpp_set && rpp < 1) {
         std::cerr << "Rays per pixel must be at least 1.\n";
         return 1;
+    }
+
+    // Ray tracer half of the side-by-side comparison (see README).
+    try {
+        render_comparison_scene(image_width, aspect_ratio, rpp_set ? rpp : 16);
+    } catch (const std::exception& e) {
+        std::cerr << "Skipping comparison scene: " << e.what()
+                  << " (run from the project root)\n";
     }
 
     Scene snowman_scene;
