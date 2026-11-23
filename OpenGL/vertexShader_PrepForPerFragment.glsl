@@ -16,7 +16,10 @@ out vec4 vertexWorldPos;
 
 void main(void)
 {
-  normal = normalize(normalMatrix * vec4(in_Normal, 0.0));
+  // Normalize only xyz: the 4x4 normal matrix carries a translation row, so
+  // normalizing the whole vec4 would shrink the direction for objects that are
+  // offset from the origin (e.g. the sun), making them render nearly black.
+  normal = vec4(normalize((normalMatrix * vec4(in_Normal, 0.0)).xyz), 0.0);
 
   vertexWorldPos = modelMatrix * vec4(in_Position, 1.0);
   lightDir = normalize(lightPosWorld - vertexWorldPos);

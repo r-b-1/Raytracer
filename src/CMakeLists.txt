@@ -2,6 +2,7 @@ add_library (cs4212-util
   ArgumentParsing.cpp ArgumentParsing.h
   handleGraphicsArgs.cpp handleGraphicsArgs.h
   model_obj.cpp model_obj.h
+  obj_mesh.h
   camera.h
   perspective_camera.h
   orthographic_camera.h

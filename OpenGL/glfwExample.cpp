@@ -83,6 +83,15 @@ GLMesh uploadMesh(const std::vector<float>& vertices,
     return mesh;
 }
 
+// Same as above for meshes that do not share vertices: the index list is just
+// 0, 1, 2, ...
+GLMesh uploadMesh(const std::vector<float>& vertices) {
+    std::vector<unsigned int> indices(vertices.size() / 6);
+    for (std::size_t i = 0; i < indices.size(); ++i)
+        indices[i] = static_cast<unsigned int>(i);
+    return uploadMesh(vertices, indices);
+}
+
 // Sphere triangles are emitted as a list (position = normal on the unit
 // sphere); the radius comes from the model matrix at draw time.
 void addSphereTriangle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
@@ -134,6 +143,17 @@ void buildSphere(int depth, std::vector<float>& vertices) {
                         glm::normalize(corners[face[2]]),
                         depth, vertices);
     }
+}
+
+// Two triangles covering [-1, 1] in x and z at y = 0, normal +y. The floor
+// scales this up through its model matrix.
+void buildPlane(std::vector<float>& vertices) {
+    const float corners[6][3] = {
+        { -1, 0,  1 }, { 1, 0,  1 }, { 1, 0, -1 },
+        { -1, 0,  1 }, { 1, 0, -1 }, { -1, 0, -1 },
+    };
+    for (const auto& c : corners)
+        vertices.insert(vertices.end(), { c[0], c[1], c[2], 0.0f, 1.0f, 0.0f });
 }
 
 } // namespace
@@ -236,7 +256,7 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     // Positive distances in front of the camera; glm::perspective requires near > 0.
     const float near = 0.1f;
-    const float far = 100.0f;
+    const float far = 1000.0f;
 
     Camera* activeCamera = &perspCam;
 
@@ -272,12 +292,12 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     // new vertices onto the sphere (Week 11 lecture). depth 3 is 1280 triangles.
     std::vector< float > sphereVertices;
     buildSphere(3, sphereVertices);
+    GLMesh sphereMesh = uploadMesh(sphereVertices);
 
-    std::vector< unsigned int > sphereIndices(sphereVertices.size() / 6);
-    for (std::size_t i = 0; i < sphereIndices.size(); ++i)
-        sphereIndices[i] = static_cast<unsigned int>(i);
-
-    GLMesh sphereMesh = uploadMesh(sphereVertices, sphereIndices);
+    // Two triangles for the floor; its model matrix scales it out to the edges.
+    std::vector< float > floorVertices;
+    buildPlane(floorVertices);
+    GLMesh floorMesh = uploadMesh(floorVertices);
 
     // Three programs share the same vertex shader. The vertex stage hands the
     // world-space normal, light direction, and position to the fragment stage,
@@ -308,24 +328,53 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         uniforms[i].eyePosWorldID = shaders[i].createUniform("eyePosWorld");
     }
 
-    // Adds a point light in front of the triangle, on the same side as the camera.
-    const glm::vec4 lightPosWorld(0.0f, 1.0f, 3.0f, 1.0f);
+    // Adds a point light in front of the scene, above the camera.
+    const glm::vec4 lightPosWorld(0.0f, 6.0f, 5.0f, 1.0f);
     const glm::vec3 diffuseComponent(0.8f, 0.3f, 0.8f); // Set color of the triangle here for non-normal.
     const glm::vec3 specularComponent(1.0f, 1.0f, 1.0f);
     const float phongExponent = 32.0f;
 
-    // Spheres in front of the bunny. They all share the one triangle mesh
+    // Sphere instances: two snowmen (the same model as the ray tracer's
+    // snowman scene) plus one colored ball. They all share the sphere mesh
     // above; the model matrix supplies position and radius.
     struct SphereInstance {
         glm::vec3 center;
         float radius;
         glm::vec3 color;
     };
-    const SphereInstance spheres[] = {
-        { glm::vec3(-2.9f, 3.0f, 2.2f), 0.85f, glm::vec3(0.85f, 0.25f, 0.25f) },
-        { glm::vec3(0.0f, -2.5f, 3.2f), 0.65f, glm::vec3(0.25f, 0.75f, 0.35f) },
-        { glm::vec3(2.9f, 0.0f, 2.2f), 0.95f, glm::vec3(0.25f, 0.45f, 0.9f) },
+    std::vector< SphereInstance > spheres;
+
+    const glm::vec3 snowColor(0.95f, 0.95f, 0.95f);
+    const glm::vec3 coalColor(0.03f, 0.03f, 0.03f);
+    const glm::vec3 carrotColor(1.0f, 0.35f, 0.05f);
+
+    // `base` is the center of the bottom snowball. The buttons, eyes, and nose
+    // sit on the +z side, which faces the camera.
+    const auto addSnowman = [&spheres, &snowColor, &coalColor, &carrotColor](
+                                const glm::vec3& base) {
+        spheres.push_back({ base, 0.75f, snowColor });
+        spheres.push_back({ base + glm::vec3(0.0f, 1.125f, 0.0f), 0.60f, snowColor });
+        spheres.push_back({ base + glm::vec3(0.0f, 1.875f, 0.0f), 0.405f, snowColor });
+
+        spheres.push_back({ base + glm::vec3(0.0f, 0.90f, 0.556f), 0.09f, coalColor });
+        spheres.push_back({ base + glm::vec3(0.0f, 1.125f, 0.60f), 0.09f, coalColor });
+        spheres.push_back({ base + glm::vec3(0.0f, 1.35f, 0.556f), 0.09f, coalColor });
+
+        spheres.push_back({ base + glm::vec3(-0.30f, 1.975f, 0.28f), 0.17f, coalColor });
+        spheres.push_back({ base + glm::vec3(0.30f, 1.975f, 0.28f), 0.17f, coalColor });
+        spheres.push_back({ base + glm::vec3(0.0f, 1.82f, 0.40f), 0.10f, carrotColor });
     };
+
+    addSnowman(glm::vec3(-2.9f, -2.25f, 2.2f));
+    addSnowman(glm::vec3(2.9f, -2.25f, 2.2f));
+
+    // Sun: the same huge background sphere used in the snowman scene.
+    spheres.push_back({ glm::vec3(0.0f, 100.0f, -200.0f), 100.0f,
+                        glm::vec3(1.0f, 0.9f, 0.15f) });
+
+    // Floor color; specular is zeroed for it so it reads as diffuse only.
+    const glm::vec3 floorColor(0.45f, 0.45f, 0.42f);
+    const glm::vec3 noSpecular(0.0f);
 
     std::cout << "Shading keys: 1 = Lambertian, 2 = Blinn-Phong, 3 = Normal\n";
 
@@ -431,6 +480,21 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
             glDrawElements(GL_TRIANGLES, sphereMesh.indexCount, GL_UNSIGNED_INT, nullptr);
         }
+
+        // Floor: the same two triangles, scaled out and moved down to y = -3.
+        // Drawn last because it zeroes the specular term; the next frame
+        // re-uploads the normal specular value before drawing the objects.
+        const glm::mat4 M_floor =
+            glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -3.0f, 0.0f))
+            * glm::scale(glm::mat4(1.0f), glm::vec3(100.0f, 1.0f, 100.0f));
+        const glm::mat4 N_floor = glm::transpose(glm::inverse(M_floor));
+        glUniformMatrix4fv(u.modelMatrixID, 1, GL_FALSE, glm::value_ptr(M_floor));
+        glUniformMatrix4fv(u.normalMatrixID, 1, GL_FALSE, glm::value_ptr(N_floor));
+        glUniform3fv(u.diffuseComponentID, 1, glm::value_ptr(floorColor));
+        glUniform3fv(u.specularComponentID, 1, glm::value_ptr(noSpecular));
+        glBindVertexArray(floorMesh.vao);
+        glDrawElements(GL_TRIANGLES, floorMesh.indexCount, GL_UNSIGNED_INT, nullptr);
+
         glBindVertexArray(0);
 
         /* Poll for and process events */
