@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -41,6 +42,99 @@ struct ShaderUniforms {
     GLint phongExponentID = -1;
     GLint eyePosWorldID = -1;
 };
+
+// A mesh on the GPU: interleaved position+normal vertices and an index buffer,
+// wrapped in a VAO so drawing it is one glDrawElements call.
+struct GLMesh {
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint ebo = 0;
+    GLsizei indexCount = 0;
+};
+
+GLMesh uploadMesh(const std::vector<float>& vertices,
+                  const std::vector<unsigned int>& indices) {
+    GLMesh mesh;
+    glGenVertexArrays(1, &mesh.vao);
+    glBindVertexArray(mesh.vao);
+
+    glGenBuffers(1, &mesh.vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, mesh.vbo);
+    glBufferData(GL_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(vertices.size() * sizeof(float)),
+                 vertices.data(), GL_STATIC_DRAW);
+
+    // The element buffer binding belongs to the VAO, so bind it while the VAO
+    // is bound or glDrawElements will not find it.
+    glGenBuffers(1, &mesh.ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh.ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+                 static_cast<GLsizeiptr>(indices.size() * sizeof(unsigned int)),
+                 indices.data(), GL_STATIC_DRAW);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat),
+                          reinterpret_cast<void*>(3 * sizeof(GLfloat)));
+
+    glBindVertexArray(0);
+    mesh.indexCount = static_cast<GLsizei>(indices.size());
+    return mesh;
+}
+
+// Sphere triangles are emitted as a list (position = normal on the unit
+// sphere); the radius comes from the model matrix at draw time.
+void addSphereTriangle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
+                       std::vector<float>& vertices) {
+    const glm::vec3 corners[3] = { a, b, c };
+    for (const glm::vec3& v : corners)
+        vertices.insert(vertices.end(), { v.x, v.y, v.z, v.x, v.y, v.z });
+}
+
+// Week 11 lecture: split a triangle into four and push the edge midpoints out
+// onto the sphere, then recurse. A latitude/longitude sphere would pinch at the
+// poles; starting from an icosahedron distributes the vertices evenly.
+void subdivideSphere(glm::vec3 v0, glm::vec3 v1, glm::vec3 v2, int depth,
+                     std::vector<float>& vertices) {
+    if (depth == 0) {
+        addSphereTriangle(v0, v1, v2, vertices); // record the triangle
+        return;
+    }
+
+    const glm::vec3 v0v1 = glm::normalize((v0 + v1) * 0.5f);
+    const glm::vec3 v1v2 = glm::normalize((v1 + v2) * 0.5f);
+    const glm::vec3 v2v0 = glm::normalize((v2 + v0) * 0.5f);
+
+    subdivideSphere(v0, v0v1, v2v0, depth - 1, vertices);
+    subdivideSphere(v0v1, v1, v1v2, depth - 1, vertices);
+    subdivideSphere(v2v0, v1v2, v2, depth - 1, vertices);
+    subdivideSphere(v0v1, v1v2, v2v0, depth - 1, vertices);
+}
+
+// Builds a unit sphere from an icosahedron (12 vertices, 20 triangles) by
+// recursive subdivision. depth 3 is 20 * 4^3 = 1280 triangles.
+void buildSphere(int depth, std::vector<float>& vertices) {
+    const float phi = (1.0f + std::sqrt(5.0f)) * 0.5f;
+    const glm::vec3 corners[12] = {
+        { -1, phi, 0 }, { 1, phi, 0 }, { -1, -phi, 0 }, { 1, -phi, 0 },
+        { 0, -1, phi }, { 0, 1, phi }, { 0, -1, -phi }, { 0, 1, -phi },
+        { phi, 0, -1 }, { phi, 0, 1 }, { -phi, 0, -1 }, { -phi, 0, 1 },
+    };
+    const int faces[20][3] = {
+        { 0, 11, 5 }, { 0, 5, 1 }, { 0, 1, 7 }, { 0, 7, 10 }, { 0, 10, 11 },
+        { 1, 5, 9 }, { 5, 11, 4 }, { 11, 10, 2 }, { 10, 7, 6 }, { 7, 1, 8 },
+        { 3, 9, 4 }, { 3, 4, 2 }, { 3, 2, 6 }, { 3, 6, 8 }, { 3, 8, 9 },
+        { 4, 9, 5 }, { 2, 4, 11 }, { 6, 2, 10 }, { 8, 6, 7 }, { 9, 8, 1 },
+    };
+
+    for (const auto& face : faces) {
+        subdivideSphere(glm::normalize(corners[face[0]]),
+                        glm::normalize(corners[face[1]]),
+                        glm::normalize(corners[face[2]]),
+                        depth, vertices);
+    }
+}
 
 } // namespace
 
@@ -146,16 +240,11 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     Camera* activeCamera = &perspCam;
 
-    GLuint m_triangleVBO[1];
-    GLuint m_indexVBO;
-    GLuint m_VAO;
-
     GLint major_version;
     glGetIntegerv(GL_MAJOR_VERSION, &major_version);
     std::cout << "GL_MAJOR_VERSION: " << major_version << std::endl;
 
-    // Load the triangle mesh: center it and scale its longest side to 6 units,
-    // matching the single triangle this used to draw.
+    // Load the bunny mesh: center it and scale its longest side to 6 units.
     ModelOBJ obj;
     if (!obj.import("assets/bunny.obj")) {
         std::cerr << "Could not load assets/bunny.obj (run from the project root)." << std::endl;
@@ -166,48 +255,29 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
 
     // Pack position (xyz) followed by normal (xyz) per vertex, the layout the
     // shaders expect.
-    std::vector< float > host_VertexBuffer;
-    host_VertexBuffer.reserve(obj.getNumberOfVertices() * 6);
+    std::vector< float > bunnyVertices;
+    bunnyVertices.reserve(obj.getNumberOfVertices() * 6);
     for (int i = 0; i < obj.getNumberOfVertices(); i++) {
         const ModelOBJ::Vertex& v = obj.getVertex(i);
-        host_VertexBuffer.insert(host_VertexBuffer.end(),
-                                 { v.position[0], v.position[1], v.position[2],
-                                   v.normal[0], v.normal[1], v.normal[2] });
+        bunnyVertices.insert(bunnyVertices.end(),
+                             { v.position[0], v.position[1], v.position[2],
+                               v.normal[0], v.normal[1], v.normal[2] });
     }
-
-    std::vector< unsigned int > indexBuffer(
+    std::vector< unsigned int > bunnyIndices(
         obj.getIndexBuffer(), obj.getIndexBuffer() + obj.getNumberOfIndices());
 
-    // create a Vertex Array Buffer to hold our mesh data
-    glGenBuffers(1, m_triangleVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
-    glBufferData(GL_ARRAY_BUFFER, host_VertexBuffer.size() * sizeof(float),
-                 host_VertexBuffer.data(), GL_STATIC_DRAW);
+    GLMesh bunny = uploadMesh(bunnyVertices, bunnyIndices);
 
-    // create a vertex array object that will map the attributes in
-    // our vertex buffer to different location attributes for our
-    // shaders
-    glGenVertexArrays(1, &m_VAO);
-    glBindVertexArray(m_VAO);
+    // Spheres are triangle meshes too: subdivide an icosahedron and project the
+    // new vertices onto the sphere (Week 11 lecture). depth 3 is 1280 triangles.
+    std::vector< float > sphereVertices;
+    buildSphere(3, sphereVertices);
 
-    glEnableVertexAttribArray(0); // This is the position attribute
-    glBindBuffer(GL_ARRAY_BUFFER, m_triangleVBO[0]);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr); // 6 floats per vertex: position + normal
+    std::vector< unsigned int > sphereIndices(sphereVertices.size() / 6);
+    for (std::size_t i = 0; i < sphereIndices.size(); ++i)
+        sphereIndices[i] = static_cast<unsigned int>(i);
 
-    glEnableVertexAttribArray(1); // This is the normal attribute
-    glVertexAttribPointer(
-        1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat),
-        reinterpret_cast<void*>(3 * sizeof(GLfloat))
-    );
-
-    // The index buffer binding belongs to the VAO, so bind it while the VAO is
-    // bound or glDrawElements will not find it.
-    glGenBuffers(1, &m_indexVBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexVBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer.size() * sizeof(unsigned int),
-                 indexBuffer.data(), GL_STATIC_DRAW);
-
-    glBindVertexArray(0);
+    GLMesh sphereMesh = uploadMesh(sphereVertices, sphereIndices);
 
     // Three programs share the same vertex shader. The vertex stage hands the
     // world-space normal, light direction, and position to the fragment stage,
@@ -243,6 +313,19 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
     const glm::vec3 diffuseComponent(0.8f, 0.3f, 0.8f); // Set color of the triangle here for non-normal.
     const glm::vec3 specularComponent(1.0f, 1.0f, 1.0f);
     const float phongExponent = 32.0f;
+
+    // Spheres in front of the bunny. They all share the one triangle mesh
+    // above; the model matrix supplies position and radius.
+    struct SphereInstance {
+        glm::vec3 center;
+        float radius;
+        glm::vec3 color;
+    };
+    const SphereInstance spheres[] = {
+        { glm::vec3(-2.9f, 3.0f, 2.2f), 0.85f, glm::vec3(0.85f, 0.25f, 0.25f) },
+        { glm::vec3(0.0f, -2.5f, 3.2f), 0.65f, glm::vec3(0.25f, 0.75f, 0.35f) },
+        { glm::vec3(2.9f, 0.0f, 2.2f), 0.95f, glm::vec3(0.25f, 0.45f, 0.9f) },
+    };
 
     std::cout << "Shading keys: 1 = Lambertian, 2 = Blinn-Phong, 3 = Normal\n";
 
@@ -331,26 +414,43 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         glUniform3fv(u.specularComponentID, 1, glm::value_ptr(specularComponent));
         glUniform1f(u.phongExponentID, phongExponent);
 
-        glBindVertexArray(m_VAO);
-        glDrawElements(GL_TRIANGLES, obj.getNumberOfIndices(), GL_UNSIGNED_INT, nullptr);
+        glBindVertexArray(bunny.vao);
+        glDrawElements(GL_TRIANGLES, bunny.indexCount, GL_UNSIGNED_INT, nullptr);
+
+        // Each sphere reuses the same triangle mesh, moved and scaled.
+        glBindVertexArray(sphereMesh.vao);
+        for (const SphereInstance& sphere : spheres) {
+            const glm::mat4 M_sphere =
+                glm::translate(glm::mat4(1.0f), sphere.center)
+                * glm::scale(glm::mat4(1.0f), glm::vec3(sphere.radius));
+            const glm::mat4 N_sphere = glm::transpose(glm::inverse(M_sphere));
+
+            glUniformMatrix4fv(u.modelMatrixID, 1, GL_FALSE, glm::value_ptr(M_sphere));
+            glUniformMatrix4fv(u.normalMatrixID, 1, GL_FALSE, glm::value_ptr(N_sphere));
+            glUniform3fv(u.diffuseComponentID, 1, glm::value_ptr(sphere.color));
+
+            glDrawElements(GL_TRIANGLES, sphereMesh.indexCount, GL_UNSIGNED_INT, nullptr);
+        }
         glBindVertexArray(0);
 
         /* Poll for and process events */
         glfwPollEvents();
 
-        float moveRatePerFrame = 0.05;
+        // float moveRatePerFrame = 0.05;
+        float moveSpeedPerSecond = 5.0f; // Changed it to be per second instead of per frame because on my PC I was moving too fast.
+        float moveStep = moveSpeedPerSecond * static_cast<float>(timeDiff);
 
         if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-        m_pos = m_pos + -m_W * moveRatePerFrame;
+        m_pos = m_pos + -m_W * moveStep;
         }
         else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-        m_pos = m_pos - m_U * moveRatePerFrame;
+        m_pos = m_pos - m_U * moveStep;
         }
         else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        m_pos = m_pos + m_W * moveRatePerFrame;
+        m_pos = m_pos + m_W * moveStep;
         }
         else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-        m_pos = m_pos + m_U * moveRatePerFrame;
+        m_pos = m_pos + m_U * moveStep;
         }
 
         // How to rotate the camera view: rotate the camera basis vectors.
@@ -412,23 +512,25 @@ int main(int argc, char* argv[]) // Host = CPU, Device = GPU
         //   Z / X      — shrink / grow the triangle
         //   R          — toggle spinning
         if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
-            modelTranslation.x -= moveRatePerFrame;
+            modelTranslation.x -= moveStep;
         }
         else if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
-            modelTranslation.x += moveRatePerFrame;
+            modelTranslation.x += moveStep;
         }
         if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-            modelTranslation.y += moveRatePerFrame;
+            modelTranslation.y += moveStep;
         }
         else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-            modelTranslation.y -= moveRatePerFrame;
+            modelTranslation.y -= moveStep;
         }
 
+        float scaleStep = 0.3f * static_cast<float>(timeDiff);
+
         if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
-            modelScale = glm::max(0.1f, modelScale - 0.01f);
+            modelScale = glm::max(0.1f, modelScale - scaleStep);
         }
         else if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
-            modelScale += 0.01f;
+            modelScale += scaleStep;
         }
 
         bool spinKeyDown = glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS;
